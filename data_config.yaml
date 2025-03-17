@@ -1,0 +1,29 @@
+# Configuration for generating synthetic sequence data
+
+mask:
+  # Length of the binary mask sequence
+  length: 4
+  # Minimum number of ones required in the mask
+  min_ones: 2
+
+Initial:
+  # Minimum length of the initial sequence
+  min_length: 1
+  # Maximum length of the initial sequence  
+  max_length: 1
+  # Minimum value for numbers in initial sequence
+  min_value: 0
+  # Maximum value for numbers in initial sequence
+  max_value: 20
+
+sequence:
+  # Output file path for generated sequences
+  path: ../simple-llm-data/sequences.txt
+  # Maximum length of generated sequences
+  max_length: 50
+  # Number of sequences to generate
+  max_rows: 1000
+  # Delimiter between columns in output file
+  column_delimiter: "|"
+  # Delimiter between rows in output file
+  row_delimiter: "\n"
