@@ -107,6 +107,7 @@ class GPT2ModelTrainer:
         for epoch in range(train_config['num_epochs']):
             total_loss = 0
             pre_eval_loss = float('inf')
+            early_stopping_counter = 0
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             for input_ids, labels in progress_bar:
                 input_ids = input_ids.to(self.device)
@@ -132,7 +133,14 @@ class GPT2ModelTrainer:
                 if eval_loss < pre_eval_loss:
                     pre_eval_loss = eval_loss
                     self.model_manager.save_checkpoint(model) 
+                    early_stopping_counter = 0
+                else:
+                    early_stopping_counter += 1
+                    if early_stopping_counter >= train_config['early_stopping']:
+                        print(f"Early stopping at epoch {epoch+1}")
+                        break
         
+                        
         return model    
 
 

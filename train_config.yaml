@@ -32,5 +32,5 @@ training:
   max_grad_norm: 1.0 # Maximum gradient norm
   weight_decay: 0.01 # Weight decay
   eval_interval: 1 # Evaluation interval and save interval
-  eval_batch_size: 32 # Evaluation batch size
-  
+  eval_batch_size: 32 # Evaluation batch size  
+  early_stopping: 5 # Early stopping patience
