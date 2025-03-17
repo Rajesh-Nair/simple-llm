@@ -1,5 +1,5 @@
 from tokenizers import Tokenizer
-from modules.train_model import ModelManager, GPT2ModelTrainer, SequenceDataset
+from modules.train_model import ModelManager, GPT2ModelTrainer, SequenceDataset, TextGenerator
 import yaml
 
 # function to load config files
@@ -20,45 +20,45 @@ def data_preprocessing(file_path: str) :
                 sequences.append(parts[2].strip())
     return sequences
 
-# Load config files
-train_config = load_config("train_config.yaml")
-data_config = load_config("data_config.yaml")   
+def train(train_config_path: str = "train_config.yaml", data_config_path: str = "data_config.yaml"):
+    """Train the model using the specified config files"""
+    # Load config files
+    train_config = load_config(train_config_path)
+    data_config = load_config(data_config_path)   
 
+    # Initialize managers
+    model_manager = ModelManager(train_config)
+    trainer = GPT2ModelTrainer(train_config)
 
-# Initialize managers
-model_manager = ModelManager(train_config)
-trainer = GPT2ModelTrainer(train_config)
+    # Load tokenizer
+    tokenizer = model_manager.load_tokenizer()
 
-# Load tokenizer
-tokenizer = model_manager.load_tokenizer()
+    # Initialize model
+    model = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
 
-# Initialize model
-model = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
+    # Create dataset
+    sequences = data_preprocessing(data_config["sequence"]["path"])
+    dataset = SequenceDataset(sequences, tokenizer, max_length=train_config['model']['n_positions'])
 
-# Create dataset
-sequences = data_preprocessing(data_config["sequence"]["path"])
-dataset = SequenceDataset(sequences, tokenizer, max_length=train_config['model']['n_positions'])
+    # Train test split
+    train_sequences, test_sequences = dataset.split_train_test(test_size=0.2, random_state=42)
 
-# Train test split
-train_sequences, test_sequences = dataset.split_train_test(test_size=0.2, random_state=42)
-
-# Train model
-model = trainer.train_model(model, train_sequences, test_sequences)
-
-# Generate text
-generated_text = trainer.generate_text(model, tokenizer, "1 1 2 3 5", max_length=100)
-print(generated_text)
-
-
-
-
-
-
-
+    # Train model
+    model = trainer.train_model(model, train_sequences, test_sequences)
+    
+    return model, tokenizer
 
 
 if __name__ == "__main__":
-    # Tokenize a sample sequence
-    pass
+    # Train the model
+    #model, tokenizer = train()
+
+    # Generate text
+    # Load config files
+    train_config = load_config("train_config.yaml")
+    text_generator = TextGenerator(train_config)
+    generated_text = text_generator.generate_text("1", max_length=100)
+    print(generated_text)
+
 
 

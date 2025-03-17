@@ -53,6 +53,12 @@ class GPT2ModelTrainer:
         self.model_manager = ModelManager(config)
 
     def initialize_model(self, vocab_size: int) -> GPT2LMHeadModel:
+
+        # Load checkpoint if specified
+        if self.config['training']['load_checkpoint']:
+            model, tokenizer = self.model_manager.load_checkpoint()
+            return model
+
         """Initialize a new GPT2 model with given vocabulary size"""
         model_config = self.config['model']
         config = GPT2Config(
@@ -140,7 +146,7 @@ class GPT2ModelTrainer:
                         print(f"Early stopping at epoch {epoch+1}")
                         break
         
-                        
+
         return model    
 
 
@@ -172,22 +178,36 @@ class GPT2ModelTrainer:
         avg_loss = total_loss / total_samples
         return avg_loss
 
-    def generate_text(self, model: GPT2LMHeadModel, tokenizer: Tokenizer, prompt: str) -> str:
-        """Generate text using the model"""
-        gen_config = self.config['generation']
-        model = model.to(self.device)
-        model.eval()    
+class TextGenerator:
+    def __init__(self, config: dict):
+        self.config = config
+        self.device = config['training']['device'] if torch.cuda.is_available() else 'cpu'
+        self.model_manager = ModelManager(config)
+        self.model, self.tokenizer = self.model_manager.load_checkpoint()
+        self.model = self.model.to(self.device)
+        self.model.eval()
 
-        input_ids = tokenizer.encode(prompt, return_tensors='pt').to(self.device)
-        attention_mask = torch.ones_like(input_ids).to(self.device)
+    def generate_text(self, prompt: str, max_length: int = None) -> str:
+        """Generate text using the loaded model"""
+        if max_length is None:
+            max_length = self.config['model']['n_positions']
+
+        input_ids = torch.tensor([self.tokenizer.encode(prompt).ids]).to(self.device)
+        attention_mask = torch.ones_like(input_ids)
 
         with torch.no_grad():
-            outputs = model.generate(
-                input_ids, 
-                max_length=gen_config['max_length'],
-                attention_mask=attention_mask
+            outputs = self.model.generate(
+                input_ids,
+                max_length=max_length,
+                attention_mask=attention_mask,
+                bos_token_id=None,  # Set to None since config has 'None' as string
+                eos_token_id=None,  # Set to None since config has 'None' as string 
+                do_sample=True,
+                top_k=50,
+                top_p=0.95,
+                temperature=0.7
             )
-        return tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ##", "")
 
 
 class ModelManager:
