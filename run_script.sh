@@ -1,11 +1,5 @@
 #! /bin/bash
 
-# Git Credentials (Replace with your own credentials)
-export GITHUB_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-git config --global user.email xxxxxxx@gmail.com
-git config --global user.name xxxxxxx
-
-
 # Download from Git
 git clone -b run_pod https://$GITHUB_TOKEN@github.com/Rajesh-Nair/simple-llm.git
 
@@ -16,11 +10,10 @@ cd simple-llm
 cp secret_templaye.yaml secret.yaml
 
 # Change the token in the secret.yaml file under github and huggingface sections
-export GITHUB_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-export HUGGINGFACE_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-sed -i 's/GITHUB_TOKEN/'$GITHUB_TOKEN'/' secret.yaml
-sed -i 's/HUGGINGFACE_TOKEN/'$HUGGINGFACE_TOKEN'/' secret.yaml
 
+# cache the credentials
+git config --global credential.helper store
+huggingface-cli login
 
 # Install dependencies
 pip install -r requirements.txt
