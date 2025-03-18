@@ -73,6 +73,8 @@ class GPT2ModelTrainer:
             model, tokenizer = self.model_manager.load_checkpoint()
             self.vocab_size = tokenizer.get_vocab_size()
             return model, tokenizer
+        else:
+            self.vocab_size = vocab_size
 
         """Initialize a new GPT2 model with given vocabulary size"""
         model_config = self.config['model']
@@ -100,7 +102,7 @@ class GPT2ModelTrainer:
         print(f"Total parameters: {total_params}")
         print(f"Trainable parameters: {trainable_params}")
 
-        return model
+        return model, None
 
     def train_model(
         self,
@@ -329,8 +331,8 @@ if __name__ == "__main__":
 
     # Load model manager and tokenizer
     if config['training']['load_checkpoint'] is None:
-    model_manager = ModelManager(config)
-    tokenizer = model_manager.load_tokenizer()
+        model_manager = ModelManager(config)
+        tokenizer = model_manager.load_tokenizer()
 
     # Initialize model
     model, tokenizer = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())

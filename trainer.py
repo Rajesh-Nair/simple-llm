@@ -31,11 +31,15 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
 
     # Load model manager and tokenizer
     if train_config['training']['load_checkpoint'] is None:
+        # Load tokenizer
         model_manager = ModelManager(train_config)
         tokenizer = model_manager.load_tokenizer()
 
-    # Initialize model
-    model, tokenizer = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
+        # Initialize model
+        model, _ = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
+    else :
+        # Load model and tokenizer from checkpoint
+        model, tokenizer = trainer.initialize_model(vocab_size=None)
 
     # Create dataset
     sequences = data_preprocessing(data_config["sequence"]["path"])
