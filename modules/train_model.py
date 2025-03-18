@@ -1,4 +1,4 @@
-from transformers import GPT2LMHeadModel, GPT2Config, AutoTokenizer
+from transformers import GPT2LMHeadModel, GPT2Config, PreTrainedTokenizerFast
 from tokenizers import Tokenizer
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -60,7 +60,8 @@ class GPT2ModelTrainer:
             print(f"Loading model from Hugging Face Hub: {self.config['training']['load_checkpoint']}")
 
             # Load model and tokenizer using local paths
-            model, tokenizer = self.model_manager.load_model_from_hub()
+            model = self.model_manager.load_model_from_hub()
+            tokenizer = self.model_manager.load_tokenizer_from_hub()
             
             # Save model and tokenizer to specified paths
             self.model_manager.save_model(model)
@@ -126,6 +127,9 @@ class GPT2ModelTrainer:
             batch_size=train_config['batch_size'], 
             shuffle=True
         )
+
+        if train_config['upload_to_huggingface']:
+            self.model_manager.upload_tokenizer_to_huggingface()
         
         for epoch in range(train_config['num_epochs']):
             total_loss = 0
@@ -157,7 +161,7 @@ class GPT2ModelTrainer:
                     pre_eval_loss = eval_loss
                     self.model_manager.save_checkpoint(model) 
                     if train_config['upload_to_huggingface']:
-                        self.model_manager.upload_to_huggingface(model)
+                        self.model_manager.upload_model_to_huggingface(model)
                     early_stopping_counter = 0
                 else:
                     early_stopping_counter += 1
@@ -238,26 +242,18 @@ class ModelManager:
     def __init__(self, config: dict):
         self.config = config
         if self.config['training']['load_checkpoint'] is not None and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
-            _ = self.login_to_huggingface()
+            self.hf_config = self.login_to_huggingface()
+
+    def load_tokenizer_from_hub(self) -> Tokenizer:
+        """Load tokenizer from Hugging Face Hub"""
+        tokenizer = PreTrainedTokenizerFast.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
+        return tokenizer    
 
     def load_model_from_hub(self) -> GPT2LMHeadModel:
-        """Load model from Hugging Face Hub"""
-        
-        # Ensure directories don't exist before creating
-        if os.path.exists(self.config['paths']['model_save_path']):
-            shutil.rmtree(self.config['paths']['model_save_path'])
-        if os.path.exists(self.config['paths']['tokenizer_save_path']):
-            shutil.rmtree(self.config['paths']['tokenizer_save_path'])
-            
-        # Create directories
-        os.makedirs(self.config['paths']['model_save_path'], exist_ok=True)
-        os.makedirs(self.config['paths']['tokenizer_save_path'], exist_ok=True)
-
         # Load model and tokenizer from Hugging Face Hub
         model = GPT2LMHeadModel.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
-        tokenizer = AutoTokenizer.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
         
-        return model, tokenizer
+        return model
 
     def load_tokenizer(self) -> Tokenizer:
         """Load tokenizer from saved file"""
@@ -275,6 +271,9 @@ class ModelManager:
         """Save the tokenizer to a file"""
         os.makedirs(os.path.dirname(self.config['paths']['tokenizer_save_path']), exist_ok=True)
         tokenizer.save(os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
+        
+        # Convert tokenizer to Hugging Face format
+        _ = self.convert_tokenizer_to_hf_format() 
 
     def save_checkpoint(self, model: GPT2LMHeadModel, tokenizer: Tokenizer = None):
         """Save the model and tokenizer"""
@@ -296,9 +295,26 @@ class ModelManager:
         hf_config = secret_config["huggingface"]
         login(token=hf_config["token"], add_to_git_credential=True) 
         return hf_config
+    
+    def convert_tokenizer_to_hf_format(self):
+        """Convert tokenizer to Hugging Face format"""
+        fast_tokenizer = PreTrainedTokenizerFast(tokenizer_file=self.config['paths']['tokenizer_save_path']+self.config['paths']['tokenizer_file'])
+        fast_tokenizer.save_pretrained(self.config['paths']['tokenizer_save_path'])
+        return fast_tokenizer
+    
+    def upload_tokenizer_to_huggingface(self):
+
+        # Login to Hugging Face Hub
+        hf_config = self.login_to_huggingface()
+
+        # Convert tokenizer to Hugging Face format
+        fast_tokenizer = self.convert_tokenizer_to_hf_format()  
+
+        # Push to hub
+        fast_tokenizer.push_to_hub(f"{hf_config['username']}/{hf_config['model_name']}")
 
 
-    def upload_to_huggingface(self, model: GPT2LMHeadModel):
+    def upload_model_to_huggingface(self, model: GPT2LMHeadModel):
         """Upload model to Hugging Face Hub"""
         try:
             # Login to Hugging Face Hub
