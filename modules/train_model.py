@@ -256,19 +256,26 @@ class ModelManager:
             
             hf_config = secret_config["huggingface"]
             
-            # Login to Hugging Face
-            login(token=hf_config["token"], add_to_git_credential=True)
+            # Login to Hugging Face            
+            try:
+                print(f"Logging in to Hugging Face Hub")
+                login(token=hf_config["token"], add_to_git_credential=True)
+            except Exception as e:
+                print(f"Failed to login to Hugging Face Hub: {str(e)}")
+                raise
             
-            # Save model locally first
-            model.save_pretrained(hf_config["local_path"])
             
-            # Push model to hub
+            # Set up git remote URL with authentication
+            remote_url = f"https://{hf_config['name']}:{hf_config['token']}@huggingface.co/{hf_config['username']}/{hf_config['model_name']}"
+            
+            # Push model to hub using git commands
             model.push_to_hub(
-                repo_id=f"{hf_config['username']}/{hf_config['model_name']}", 
+                repo_id=f"{hf_config['username']}/{hf_config['model_name']}",
                 commit_message=hf_config["commit_message"],
-                token=hf_config["token"],
-                repository_url=hf_config["remote_path"],
-                revision=hf_config["model_version"]
+                use_auth_token=hf_config["token"],
+                git_user=hf_config["username"],
+                git_email=f"{hf_config['username']}@users.noreply.huggingface.co",
+                config={"http.extraheader" : f"AUTHORIZATION: Bearer {hf_config['token']}"}
             )
             print(f"Successfully uploaded model to {hf_config['remote_path']}")
             
