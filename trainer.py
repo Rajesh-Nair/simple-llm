@@ -26,15 +26,16 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
     train_config = load_config(train_config_path)
     data_config = load_config(data_config_path)   
 
-    # Initialize managers
-    model_manager = ModelManager(train_config)
+    # Initialize trainer
     trainer = GPT2ModelTrainer(train_config)
 
-    # Load tokenizer
-    tokenizer = model_manager.load_tokenizer()
+    # Load model manager and tokenizer
+    if train_config['training']['load_checkpoint'] is None:
+        model_manager = ModelManager(train_config)
+        tokenizer = model_manager.load_tokenizer()
 
     # Initialize model
-    model = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
+    model, tokenizer = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
 
     # Create dataset
     sequences = data_preprocessing(data_config["sequence"]["path"])

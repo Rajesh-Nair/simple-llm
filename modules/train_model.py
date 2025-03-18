@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import yaml
 import os
 from tqdm import tqdm
-from huggingface_hub import login, is_logged_in
+from huggingface_hub import login
 
 
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -65,17 +65,19 @@ class GPT2ModelTrainer:
             # Save model and tokenizer to specified paths
             self.model_manager.save_model(model)
             self.model_manager.save_tokenizer(tokenizer)
+            self.vocab_size = tokenizer.get_vocab_size()
 
-            return model
+            return model, tokenizer
         elif self.config['training']['load_checkpoint'] is not None:
             print(f"Loading checkpoint from {self.config['training']['load_checkpoint']}")
             model, tokenizer = self.model_manager.load_checkpoint()
-            return model
+            self.vocab_size = tokenizer.get_vocab_size()
+            return model, tokenizer
 
         """Initialize a new GPT2 model with given vocabulary size"""
         model_config = self.config['model']
         config = GPT2Config(
-            vocab_size=vocab_size,
+            vocab_size=self.vocab_size,
             n_positions=model_config['n_positions'],
             n_ctx=model_config['n_positions'],
             n_embd=model_config['n_embd'],
@@ -233,6 +235,8 @@ class TextGenerator:
 class ModelManager:
     def __init__(self, config: dict):
         self.config = config
+        if self.config['training']['load_checkpoint'] is not None and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
+            self.login_to_huggingface()
 
     def load_model_from_hub(self) -> GPT2LMHeadModel:
         """Load model from Hugging Face Hub"""
@@ -281,26 +285,22 @@ class ModelManager:
         model = self.load_model()
         tokenizer = self.load_tokenizer()
         return model, tokenizer
+    
+    def login_to_huggingface(self):
+        """Login to Hugging Face Hub"""
+        with open("secret.yaml", "r") as f:
+            secret_config = yaml.safe_load(f)
+            
+        hf_config = secret_config["huggingface"]
+        login(token=hf_config["token"], add_to_git_credential=True) 
+
 
     def upload_to_huggingface(self, model: GPT2LMHeadModel):
         """Upload model to Hugging Face Hub"""
         try:
-            # Load secret config
-            with open("secret.yaml", "r") as f:
-                secret_config = yaml.safe_load(f)
-            
-            hf_config = secret_config["huggingface"]
-            
-            # Login to Hugging Face if not already logged in
-            try:
-                if not is_logged_in():
-                    print(f"Logging in to Hugging Face Hub")
-                    login(token=hf_config["token"], add_to_git_credential=True)
-            except Exception as e:
-                print(f"Failed to login to Hugging Face Hub: {str(e)}")
-                raise
-            
-            
+            # Login to Hugging Face Hub
+            self.login_to_huggingface()
+                        
             # Set up git remote URL with authentication
             remote_url = f"https://{hf_config['name']}:{hf_config['token']}@huggingface.co/{hf_config['username']}/{hf_config['model_name']}"
             
@@ -324,15 +324,16 @@ if __name__ == "__main__":
     # Load config
     config = load_config("train_config.yaml")
     
-    # Initialize managers
-    model_manager = ModelManager(config)
+    # Initialize trainer
     trainer = GPT2ModelTrainer(config)
 
-    # Load tokenizer
+    # Load model manager and tokenizer
+    if config['training']['load_checkpoint'] is None:
+    model_manager = ModelManager(config)
     tokenizer = model_manager.load_tokenizer()
 
     # Initialize model
-    model = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
+    model, tokenizer = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
 
     # Create dataset
     sequences = ["1 1234 42113", "1 1234 42113", "1 1234 42113"]
