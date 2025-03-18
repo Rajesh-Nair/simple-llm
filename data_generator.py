@@ -3,6 +3,7 @@ from modules.sequence_generator import generate_sequence
 import yaml
 import random
 from tqdm import tqdm
+import os
 
 
 def load_config(path):
@@ -77,6 +78,9 @@ def save_data(data, config):
         data (list): List of lists containing sequence data
         config (dict): Configuration parameters
     """
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(config["sequence"]["path"]), exist_ok=True)
+    
     with open(config["sequence"]["path"], "w") as file:
         print(f"Saving data to {config['sequence']['path']}")
         for sequence in tqdm(data):

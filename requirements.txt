@@ -2,5 +2,5 @@ torch
 transformers
 datasets
 tqdm
-yaml
+pyyaml
 

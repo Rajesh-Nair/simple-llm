@@ -29,7 +29,7 @@ pip install -r requirements.txt
 python3 data_generator.py
 
 # Train tokenizer
-python3 train_tokenizer.py
+python3 tokenizer.py
 
 # Training
 python3 trainer.py
