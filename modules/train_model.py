@@ -58,8 +58,14 @@ class GPT2ModelTrainer:
         # Load checkpoint if specified
         if self.config['training']['load_checkpoint'] and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
             print(f"Loading model from Hugging Face Hub: {self.config['training']['load_checkpoint']}")
-            model = GPT2LMHeadModel.from_pretrained(self.config['training']['load_checkpoint'])
-            tokenizer = AutoTokenizer.from_pretrained(self.config['training']['load_checkpoint'])
+
+            # Load model and tokenizer using local paths
+            model, tokenizer = self.model_manager.load_model_from_hub()
+            
+            # Save model and tokenizer to specified paths
+            self.model_manager.save_model(model)
+            self.model_manager.save_tokenizer(tokenizer)
+
             return model
         elif self.config['training']['load_checkpoint'] is not None:
             print(f"Loading checkpoint from {self.config['training']['load_checkpoint']}")
@@ -227,6 +233,25 @@ class TextGenerator:
 class ModelManager:
     def __init__(self, config: dict):
         self.config = config
+
+    def load_model_from_hub(self) -> GPT2LMHeadModel:
+        """Load model from Hugging Face Hub"""
+        
+        # Ensure directories don't exist before creating
+        if os.path.exists(self.config['paths']['model_save_path']):
+            shutil.rmtree(self.config['paths']['model_save_path'])
+        if os.path.exists(self.config['paths']['tokenizer_save_path']):
+            shutil.rmtree(self.config['paths']['tokenizer_save_path'])
+            
+        # Create directories
+        os.makedirs(self.config['paths']['model_save_path'], exist_ok=True)
+        os.makedirs(self.config['paths']['tokenizer_save_path'], exist_ok=True)
+
+        # Load model and tokenizer from Hugging Face Hub
+        model = GPT2LMHeadModel.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
+        tokenizer = AutoTokenizer.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
+        
+        return model, tokenizer
 
     def load_tokenizer(self) -> Tokenizer:
         """Load tokenizer from saved file"""

@@ -54,9 +54,12 @@ if __name__ == "__main__":
     data_config = load_config("data_config.yaml")
     train_config = load_config("train_config.yaml")
     
-    build_tokenizer(
-        file_path=data_config["sequence"]["path"], # Path to the input text file
-        output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
-        vocab_size=train_config.get("tokenizer", {}).get("vocab_size", 1000)  # Default 1000 if not specified
-    )
+    if train_config['training']['load_checkpoint'] is not None:
+        print("Loading checkpoint - skipping tokenizer training")
+    else:
+        build_tokenizer(
+            file_path=data_config["sequence"]["path"], # Path to the input text file
+            output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
+            vocab_size=train_config.get("tokenizer", {}).get("vocab_size", 1000)  # Default 1000 if not specified
+        )
 
