@@ -150,7 +150,12 @@ class GPT2ModelTrainer:
                         print(f"Early stopping at epoch {epoch+1}")
                         break
         
-
+            # Generate text
+            if (epoch + 1) % train_config['generate_text_steps'] == 0:
+                text_generator = TextGenerator(self.config)
+                generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
+                print(f"Generated text at epoch {epoch+1}: {generated_text}")
+        
         return model    
 
 
