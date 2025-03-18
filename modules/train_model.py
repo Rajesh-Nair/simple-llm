@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 import yaml
 import os
 from tqdm import tqdm
+from huggingface_hub import login
 
 
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -55,7 +56,8 @@ class GPT2ModelTrainer:
     def initialize_model(self, vocab_size: int) -> GPT2LMHeadModel:
 
         # Load checkpoint if specified
-        if self.config['training']['load_checkpoint']:
+        if self.config['training']['load_checkpoint'] is not None:
+            print(f"Loading checkpoint from {self.config['training']['load_checkpoint']}")
             model, tokenizer = self.model_manager.load_checkpoint()
             return model
 
@@ -139,6 +141,8 @@ class GPT2ModelTrainer:
                 if eval_loss < pre_eval_loss:
                     pre_eval_loss = eval_loss
                     self.model_manager.save_checkpoint(model) 
+                    if train_config['upload_to_huggingface']:
+                        self.model_manager.upload_to_huggingface(model)
                     early_stopping_counter = 0
                 else:
                     early_stopping_counter += 1
@@ -242,6 +246,35 @@ class ModelManager:
         model = self.load_model()
         tokenizer = self.load_tokenizer()
         return model, tokenizer
+
+    def upload_to_huggingface(self, model: GPT2LMHeadModel):
+        """Upload model to Hugging Face Hub"""
+        try:
+            # Load secret config
+            with open("secret.yaml", "r") as f:
+                secret_config = yaml.safe_load(f)
+            
+            hf_config = secret_config["huggingface"]
+            
+            # Login to Hugging Face
+            login(token=hf_config["token"], add_to_git_credential=True)
+            
+            # Save model locally first
+            model.save_pretrained(hf_config["local_path"])
+            
+            # Push model to hub
+            model.push_to_hub(
+                repo_id=f"{hf_config['username']}/{hf_config['model_name']}", 
+                commit_message=hf_config["commit_message"],
+                token=hf_config["token"],
+                repository_url=hf_config["remote_path"],
+                revision=hf_config["model_version"]
+            )
+            print(f"Successfully uploaded model to {hf_config['remote_path']}")
+            
+        except Exception as e:
+            print(f"Error uploading model to Hugging Face Hub: {str(e)}")
+            raise
 
 
 if __name__ == "__main__":
