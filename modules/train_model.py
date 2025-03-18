@@ -1,4 +1,4 @@
-from transformers import GPT2LMHeadModel, GPT2Config
+from transformers import GPT2LMHeadModel, GPT2Config, AutoTokenizer
 from tokenizers import Tokenizer
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import yaml
 import os
 from tqdm import tqdm
-from huggingface_hub import login
+from huggingface_hub import login, is_logged_in
 
 
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -56,7 +56,12 @@ class GPT2ModelTrainer:
     def initialize_model(self, vocab_size: int) -> GPT2LMHeadModel:
 
         # Load checkpoint if specified
-        if self.config['training']['load_checkpoint'] is not None:
+        if self.config['training']['load_checkpoint'] and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
+            print(f"Loading model from Hugging Face Hub: {self.config['training']['load_checkpoint']}")
+            model = GPT2LMHeadModel.from_pretrained(self.config['training']['load_checkpoint'])
+            tokenizer = AutoTokenizer.from_pretrained(self.config['training']['load_checkpoint'])
+            return model
+        elif self.config['training']['load_checkpoint'] is not None:
             print(f"Loading checkpoint from {self.config['training']['load_checkpoint']}")
             model, tokenizer = self.model_manager.load_checkpoint()
             return model
@@ -261,10 +266,11 @@ class ModelManager:
             
             hf_config = secret_config["huggingface"]
             
-            # Login to Hugging Face            
+            # Login to Hugging Face if not already logged in
             try:
-                print(f"Logging in to Hugging Face Hub")
-                login(token=hf_config["token"], add_to_git_credential=True)
+                if not is_logged_in():
+                    print(f"Logging in to Hugging Face Hub")
+                    login(token=hf_config["token"], add_to_git_credential=True)
             except Exception as e:
                 print(f"Failed to login to Hugging Face Hub: {str(e)}")
                 raise
