@@ -51,7 +51,7 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
 
 if __name__ == "__main__":
     # Train the model
-    #model, tokenizer = train()
+    model, tokenizer = train()
 
     # Generate text
     # Load config files

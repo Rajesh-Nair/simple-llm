@@ -20,9 +20,9 @@ sequence:
   # Output file path for generated sequences
   path: ../simple-llm-data/sequences.txt
   # Maximum length of generated sequences
-  max_length: 50
+  max_length: 100
   # Number of sequences to generate
-  max_rows: 1000
+  max_rows: 100000
   # Delimiter between columns in output file
   column_delimiter: "|"
   # Delimiter between rows in output file
