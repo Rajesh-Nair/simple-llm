@@ -238,7 +238,7 @@ class ModelManager:
     def __init__(self, config: dict):
         self.config = config
         if self.config['training']['load_checkpoint'] is not None and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
-            self.login_to_huggingface()
+            _ = self.login_to_huggingface()
 
     def load_model_from_hub(self) -> GPT2LMHeadModel:
         """Load model from Hugging Face Hub"""
@@ -295,13 +295,14 @@ class ModelManager:
             
         hf_config = secret_config["huggingface"]
         login(token=hf_config["token"], add_to_git_credential=True) 
+        return hf_config
 
 
     def upload_to_huggingface(self, model: GPT2LMHeadModel):
         """Upload model to Hugging Face Hub"""
         try:
             # Login to Hugging Face Hub
-            self.login_to_huggingface()
+            hf_config = self.login_to_huggingface()
                         
             # Set up git remote URL with authentication
             remote_url = f"https://{hf_config['name']}:{hf_config['token']}@huggingface.co/{hf_config['username']}/{hf_config['model_name']}"
