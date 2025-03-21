@@ -38,4 +38,5 @@ def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str 
 
 
 if __name__ == "__main__":
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
     train_bpe_tokenizer(file_path="../synthetic_data/sequences.txt", vocab_size=1000, output_dir="../synthetic_data/tokenizer")

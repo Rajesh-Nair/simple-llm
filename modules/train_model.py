@@ -8,7 +8,7 @@ import yaml
 import os
 from tqdm import tqdm
 from huggingface_hub import login
-
+# from tokenizers import BPE, Whitespace
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """Load configuration from yaml file"""
@@ -246,7 +246,7 @@ class TextGenerator:
                         do_sample=True,
                         top_k=1,
                         top_p=0.95,
-                        temperature=0
+                        temperature=0.01
                     )
                     
                     # Append only the newly generated token
@@ -263,7 +263,7 @@ class TextGenerator:
                     do_sample=True,
                     top_k=1,
                     top_p=0.95,
-                    temperature=0
+                    temperature=0.01
                 )
         return self.processor.post_processing(self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ", ""))
 
@@ -276,7 +276,8 @@ class ModelManager:
 
     def load_tokenizer_from_hub(self) -> Tokenizer:
         """Load tokenizer from Hugging Face Hub"""
-        tokenizer = PreTrainedTokenizerFast.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
+        fast_tokenizer = self.convert_hf_to_bpe_tokenizer(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
+        tokenizer = fast_tokenizer.to_tokenizer()
         return tokenizer    
 
     def load_model_from_hub(self) -> GPT2LMHeadModel:
@@ -332,6 +333,28 @@ class ModelManager:
         fast_tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
         fast_tokenizer.save_pretrained(self.config['paths']['tokenizer_save_path'])
         return fast_tokenizer
+
+    # def convert_hf_to_bpe_tokenizer(self, hf_tokenizer_path: str) -> Tokenizer:
+    #     """Convert Hugging Face tokenizer to BPE tokenizer format
+        
+    #     Args:
+    #         hf_tokenizer_path: Path to the Hugging Face tokenizer
+            
+    #     Returns:
+    #         Tokenizer: BPE tokenizer
+    #     """
+    #     # Load the HF tokenizer
+    #     hf_tokenizer = PreTrainedTokenizerFast.from_pretrained(hf_tokenizer_path)
+        
+    #     # Create BPE tokenizer with same vocab and merges
+    #     tokenizer = Tokenizer(BPE(unk_token="<|UNK|>", continuing_subword_prefix="##"))
+    #     tokenizer.pre_tokenizer = Whitespace()
+        
+    #     # Copy vocabulary and merges from HF tokenizer
+    #     tokenizer.model.vocab = hf_tokenizer.get_vocab()
+    #     tokenizer.model.merges = hf_tokenizer.get_merges()
+        
+    #     return tokenizer
     
     def upload_tokenizer_to_huggingface(self):
 

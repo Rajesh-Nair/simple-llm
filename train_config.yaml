@@ -32,7 +32,7 @@ model:
 
 training:
   load_checkpoint: null # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
-  batch_size: 128 # Batch size
+  batch_size: 512 # Batch size
   learning_rate: 0.00005 # Learning rate
   num_epochs: 100 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
@@ -41,10 +41,10 @@ training:
   max_grad_norm: 1.0 # Maximum gradient norm
   weight_decay: 0.01 # Weight decay
   eval_interval: 1 # Evaluation interval and save interval
-  eval_batch_size: 128 # Evaluation batch size  
+  eval_batch_size: 512 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
-  upload_to_huggingface: true # Upload to Hugging Face Hub
-  generate_text_steps : 1 # Generate text steps
+  upload_to_huggingface: false # Upload to Hugging Face Hub
+  generate_text_steps : 5 # Generate text steps
   generate_text_length : 100 # Generate text length
-  generate_text_input : "1" # Generate text input
+  generate_text_input : "1 1 2 3 5 8" # Generate text input
 
