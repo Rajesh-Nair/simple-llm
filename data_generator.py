@@ -30,10 +30,13 @@ def generate_mask(config):
     Returns:
         list: Binary mask of specified length with minimum number of ones
     """
-    mask = [random.randint(0, 1) for _ in range(config["mask"]["length"])]
-    # Recursively regenerate if mask doesn't have minimum required ones
-    if sum(mask) < config["mask"]["min_ones"]:
-        mask = generate_mask(config)
+    if config["mask"]["length"] == config["Initial"]["max_length"]:
+        mask = [1] * config["mask"]["length"]
+    else:
+        mask = [random.randint(0, 1) for _ in range(config["mask"]["length"])]
+        # Recursively regenerate if mask doesn't have minimum required ones
+        if sum(mask) < config["mask"]["min_ones"]:
+            mask = generate_mask(config)
     return mask
 
 def generate_initial(config):
@@ -62,12 +65,22 @@ def generate_data(config):
     """
     data = []
     print(f"Generating {config['sequence']['max_rows']} sequences")
-    for i in tqdm(range(config["sequence"]["max_rows"])):
-        mask = generate_mask(config)
-        initial = generate_initial(config)
-        sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
-        row = [mask, initial, " ".join(str(x) for x in sequence)]
-        data.append(row)
+    # Generate all sequences from min_value to max_value
+    if config["sequence"]["max_rows"] == "**":
+        for i in range(config["Initial"]["min_value"], config["Initial"]["max_value"]+1):
+            initial = [i]
+            mask = generate_mask(config)
+            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
+            row = [mask, initial, " ".join(str(x) for x in sequence)]
+            data.append(row)
+
+    else :
+        for i in tqdm(range(config["sequence"]["max_rows"])):
+            mask = generate_mask(config)
+            initial = generate_initial(config)
+            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
+            row = [mask, initial, " ".join(str(x) for x in sequence)]
+            data.append(row)
     return data
 
 def save_data(data, config):

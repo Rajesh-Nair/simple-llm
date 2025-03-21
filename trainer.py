@@ -1,5 +1,6 @@
 from tokenizers import Tokenizer
 from modules.train_model import ModelManager, GPT2ModelTrainer, SequenceDataset, TextGenerator
+from modules.data_processor import process
 import yaml
 
 # function to load config files
@@ -11,13 +12,13 @@ def load_config(config_path: str = "config.yaml") -> dict:
     return config
 
 # function to preprocess data
-def data_preprocessing(file_path: str) :
+def data_preprocessing(file_path: str, processor: process) :
     sequences = []
     with open(file_path, 'r') as f:
         for line in f:
             parts = line.strip().split('|')
             if len(parts) >= 3:
-                sequences.append(parts[2].strip())
+                sequences.append(processor.pre_processing(parts[2].strip()))
     return sequences
 
 def train(train_config_path: str = "train_config.yaml", data_config_path: str = "data_config.yaml"):
@@ -41,12 +42,13 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
         # Load model and tokenizer from checkpoint
         model, tokenizer = trainer.initialize_model(vocab_size=None)
 
-    # Create dataset
-    sequences = data_preprocessing(data_config["sequence"]["path"])
+    # Create dataset    
+    processor = process(train_config)
+    sequences = data_preprocessing(data_config["sequence"]["path"], processor)
     dataset = SequenceDataset(sequences, tokenizer, max_length=train_config['model']['n_positions'])
 
     # Train test split
-    train_sequences, test_sequences = dataset.split_train_test(test_size=0.2, random_state=42)
+    train_sequences, test_sequences = dataset.split_train_test(test_size=0.3, random_state=42)
 
     # Train model
     model = trainer.train_model(model, train_sequences, test_sequences)

@@ -5,7 +5,7 @@ from tokenizers.pre_tokenizers import Whitespace
 import os
 
 
-def train_bpe_tokenizer(file_path: str, vocab_size: int = 1000, output_dir: str = "../tokenizer") -> None:
+def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str = "../tokenizer") -> None:
     """
     Train a BPE tokenizer on input text file and save vocabulary and merge files
     
@@ -23,10 +23,7 @@ def train_bpe_tokenizer(file_path: str, vocab_size: int = 1000, output_dir: str 
     
     # Initialize trainer
     trainer = BpeTrainer(
-        vocab_size=vocab_size,
-        special_tokens=["<|UNK|>"],
-        min_frequency=2,
-        continuing_subword_prefix="##"
+        **tokenizer_config
     )
     
     # Train tokenizer

@@ -1,4 +1,5 @@
 from transformers import GPT2LMHeadModel, GPT2Config, PreTrainedTokenizerFast
+from modules.data_processor import process
 from tokenizers import Tokenizer
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -132,6 +133,7 @@ class GPT2ModelTrainer:
             self.model_manager.upload_tokenizer_to_huggingface()
         
         for epoch in range(train_config['num_epochs']):
+            model.train()
             total_loss = 0
             pre_eval_loss = float('inf')
             early_stopping_counter = 0
@@ -214,28 +216,56 @@ class TextGenerator:
         self.model, self.tokenizer = self.model_manager.load_checkpoint()
         self.model = self.model.to(self.device)
         self.model.eval()
+        self.processor = process(config)
 
     def generate_text(self, prompt: str, max_length: int = None) -> str:
         """Generate text using the loaded model"""
         if max_length is None:
             max_length = self.config['model']['n_positions']
 
-        input_ids = torch.tensor([self.tokenizer.encode(prompt).ids]).to(self.device)
+        input_ids = torch.tensor([self.tokenizer.encode(self.processor.pre_processing(prompt)).ids]).to(self.device)
         attention_mask = torch.ones_like(input_ids)
 
         with torch.no_grad():
-            outputs = self.model.generate(
-                input_ids,
-                max_length=max_length,
-                attention_mask=attention_mask,
-                bos_token_id=None,  # Set to None since config has 'None' as string
-                eos_token_id=None,  # Set to None since config has 'None' as string 
-                do_sample=True,
-                top_k=50,
-                top_p=0.95,
-                temperature=0.7
-            )
-        return self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ##", "")
+            if max_length > self.config['model']['n_positions']:
+                outputs = input_ids  # Start with the prompt
+                i = 0
+                while outputs.size(1) < max_length and i < 150: #Max 150 tokens
+                    # Get the last n_positions-1 tokens as context
+                    context = outputs[:, -(self.config['model']['n_positions']-1):]
+                    # Update attention mask for the context
+                    context_mask = torch.ones_like(context)
+                    
+                    # Generate next token
+                    output = self.model.generate(
+                        context,
+                        max_length=context.size(1) + 1,  # Only generate one new token
+                        attention_mask=context_mask,
+                        bos_token_id=None,
+                        eos_token_id=None,
+                        do_sample=True,
+                        top_k=1,
+                        top_p=0.95,
+                        temperature=0
+                    )
+                    
+                    # Append only the newly generated token
+                    new_token = output[:, -1:]
+                    outputs = torch.cat([outputs, new_token], dim=1)
+                    i += 1
+            else :
+                outputs = self.model.generate(
+                    input_ids,
+                    max_length=max_length,
+                    attention_mask=attention_mask,
+                    bos_token_id=None,  # Set to None since config has 'None' as string
+                    eos_token_id=None,  # Set to None since config has 'None' as string 
+                    do_sample=True,
+                    top_k=1,
+                    top_p=0.95,
+                    temperature=0
+                )
+        return self.processor.post_processing(self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ", ""))
 
 
 class ModelManager:
@@ -298,7 +328,8 @@ class ModelManager:
     
     def convert_tokenizer_to_hf_format(self):
         """Convert tokenizer to Hugging Face format"""
-        fast_tokenizer = PreTrainedTokenizerFast(tokenizer_file=self.config['paths']['tokenizer_save_path']+self.config['paths']['tokenizer_file'])
+        print(os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
+        fast_tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
         fast_tokenizer.save_pretrained(self.config['paths']['tokenizer_save_path'])
         return fast_tokenizer
     

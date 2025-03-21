@@ -6,14 +6,22 @@ paths:
   tokenizer_save_path: "../simple-llm-gpt2-v1.0" # Path to save the tokenizer
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
+pre_processing:
+  token_delimiter_type : "+" # "chain_of_thought"
+
+
 tokenizer:
-  vocab_size: 1000  # Or desired vocabulary size
+  vocab_size: 11  # Or desired vocabulary size
+  special_tokens:
+    - "<|UNK|>"
+  ##min_frequency: 2
+  #continuing_subword_prefix: "##"
 
 model:
-  n_positions: 128      # Maximum sequence length
-  n_embd: 256          # Embedding dimension
-  n_layer: 8           # Number of transformer layers
-  n_head: 8            # Number of attention heads
+  n_positions: 512      # Maximum sequence length
+  n_embd: 64          # Embedding dimension
+  n_layer: 4           # Number of transformer layers
+  n_head: 4            # Number of attention heads
   activation_function: "gelu" # Activation function
   resid_pdrop: 0.1     # Dropout probability for residual layers
   embd_pdrop: 0.1      # Dropout probability for embeddings
@@ -24,7 +32,7 @@ model:
 
 training:
   load_checkpoint: null # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
-  batch_size: 512 # Batch size
+  batch_size: 128 # Batch size
   learning_rate: 0.00005 # Learning rate
   num_epochs: 100 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
@@ -36,7 +44,7 @@ training:
   eval_batch_size: 128 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
   upload_to_huggingface: true # Upload to Hugging Face Hub
-  generate_text_steps : 5 # Generate text steps
+  generate_text_steps : 1 # Generate text steps
   generate_text_length : 100 # Generate text length
-  generate_text_input : "1 1 2 3 5 8" # Generate text input
+  generate_text_input : "1" # Generate text input
 
