@@ -3,6 +3,12 @@ from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 import os
+from transformers import PreTrainedTokenizerFast
+
+def convert_tokenizer_to_hf_format(tokenizer):
+    """Convert tokenizer to Hugging Face format"""
+    fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=tokenizer)
+    return fast_tokenizer
 
 
 def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str = "../tokenizer") -> None:
@@ -20,6 +26,9 @@ def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str 
     
     # Configure pre-tokenization
     tokenizer.pre_tokenizer = Whitespace()
+
+    # Add pad token
+    tokenizer.pad_token = "<|pad|>"
     
     # Initialize trainer
     trainer = BpeTrainer(
@@ -28,12 +37,16 @@ def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str 
     
     # Train tokenizer
     tokenizer.train(files=[file_path], trainer=trainer)
+
+    fast_tokenizer = convert_tokenizer_to_hf_format(tokenizer)  
     
     # Create output directory if needed
     os.makedirs(output_dir, exist_ok=True)
     
     # Save the tokenizer files
     tokenizer.save(f"{output_dir}/tokenizer.json")
+
+    fast_tokenizer.save_pretrained(output_dir)
     
 
 

@@ -30,19 +30,10 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
     # Initialize trainer
     trainer = GPT2ModelTrainer(train_config)
 
-    # Load model manager and tokenizer
-    if train_config['training']['load_checkpoint'] is None:
-        # Load tokenizer
-        model_manager = ModelManager(train_config)
-        tokenizer = model_manager.load_tokenizer()
+    # Initialize model and tokenizer
+    model, tokenizer = trainer.initialize_model()
 
-        # Initialize model
-        model, _ = trainer.initialize_model(vocab_size=tokenizer.get_vocab_size())
-    else :
-        # Load model and tokenizer from checkpoint
-        model, tokenizer = trainer.initialize_model(vocab_size=None)
-
-    # Create dataset    
+    # Load dataset    
     processor = process(train_config)
     sequences = data_preprocessing(data_config["sequence"]["path"], processor)
     dataset = SequenceDataset(sequences, tokenizer, max_length=train_config['model']['n_positions'])
@@ -50,7 +41,7 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
     # Train test split
     train_sequences, test_sequences = dataset.split_train_test(test_size=0.3, random_state=42)
 
-    # Train model
+    # Train the model
     model = trainer.train_model(model, train_sequences, test_sequences)
     
     return model, tokenizer
