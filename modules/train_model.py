@@ -12,6 +12,7 @@ from accelerate import Accelerator
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 from transformers import get_linear_schedule_with_warmup
+import wandb
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """Load configuration from yaml file"""
@@ -56,6 +57,19 @@ class GPT2ModelTrainer:
         self.accelerator = Accelerator()
         self.device = self.accelerator.device
         self.model_manager = ModelManager(config)
+        
+        # Initialize wandb if enabled in config
+        if self.config.get('wandb', {}).get('enabled', False):
+            with open("secret.yaml", "r") as f:
+                secret_config = yaml.safe_load(f)
+            wandb_config = secret_config.get("wandb", {})
+            if self.accelerator.is_main_process:
+                wandb.login(key=wandb_config.get("api_key"))
+                wandb.init(
+                    project=wandb_config.get("project_name"),
+                    entity=wandb_config.get("entity"),
+                    config=self.config
+                )
 
     def initialize_model(self) -> GPT2LMHeadModel:
 
@@ -200,6 +214,15 @@ class GPT2ModelTrainer:
                 total_loss += loss.item() * train_config['gradient_accumulation_steps']
                 progress_bar.set_postfix({'loss': loss.item() * train_config['gradient_accumulation_steps']})
                 
+                # Log metrics to wandb if enabled
+                if self.config.get('wandb', {}).get('enabled', False) and self.accelerator.is_main_process:
+                    wandb.log({
+                        "train_loss": loss.item() * train_config['gradient_accumulation_steps'],
+                        "learning_rate": scheduler.get_last_lr()[0],
+                        "epoch": epoch,
+                        "global_step": epoch * len(train_loader) + step
+                    })
+                
             # Gather loss from all processes
             total_loss = self.accelerator.gather(torch.tensor(total_loss).to(self.device)).mean().item()
             avg_loss = total_loss / len(train_loader)
@@ -212,6 +235,14 @@ class GPT2ModelTrainer:
                 eval_loss = self.evaluate_model(model, test_dataset)
                 if self.accelerator.is_main_process:
                     print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Evaluation Loss: {eval_loss:.4f}")
+                    
+                    # Log evaluation metrics to wandb if enabled
+                    if self.config.get('wandb', {}).get('enabled', False):
+                        wandb.log({
+                            "eval_loss": eval_loss,
+                            "epoch": epoch
+                        })
+                    
                     if eval_loss < pre_eval_loss:
                         pre_eval_loss = eval_loss
                         # Unwrap model before saving
@@ -231,10 +262,21 @@ class GPT2ModelTrainer:
                 text_generator = TextGenerator(self.config)
                 generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
                 print(f"Generated text at epoch {epoch+1}: {generated_text}")
+                
+                # Log generated text to wandb if enabled
+                if self.config.get('wandb', {}).get('enabled', False):
+                    wandb.log({
+                        "generated_text": generated_text,
+                        "epoch": epoch
+                    })
             
             # Wait for all processes to sync up
             self.accelerator.wait_for_everyone()
         
+        # Finish wandb run if enabled
+        if self.config.get('wandb', {}).get('enabled', False) and self.accelerator.is_main_process:
+            wandb.finish()
+            
         return self.accelerator.unwrap_model(model)    
 
     def evaluate_model(self, model: GPT2LMHeadModel, dataset: Dataset) -> float:
