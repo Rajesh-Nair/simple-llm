@@ -9,6 +9,8 @@ import os
 from tqdm import tqdm
 from huggingface_hub import login, Repository
 from accelerate import Accelerator
+from torch.nn.parallel import DistributedDataParallel
+import torch.distributed as dist
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """Load configuration from yaml file"""
@@ -131,10 +133,20 @@ class GPT2ModelTrainer:
             lr=train_config['learning_rate']
         )
         
+        # Create sampler for distributed training
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_dataset,
+            num_replicas=self.accelerator.num_processes,
+            rank=self.accelerator.process_index,
+            shuffle=True
+        )
+        
         train_loader = DataLoader(
             train_dataset, 
-            batch_size=train_config['per_device_batch_size'], 
-            shuffle=True
+            batch_size=train_config['per_device_batch_size'],
+            sampler=train_sampler,
+            num_workers=train_config['num_workers'],
+            pin_memory=True
         )
 
         # Prepare for distributed training
@@ -153,6 +165,7 @@ class GPT2ModelTrainer:
             pre_eval_loss = float('inf')
         for epoch in range(train_config['num_epochs']):
             model.train()
+            train_sampler.set_epoch(epoch)  # Important for proper shuffling
             total_loss = 0
             early_stopping_counter = 0
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
@@ -167,32 +180,40 @@ class GPT2ModelTrainer:
                 total_loss += loss.item()
                 progress_bar.set_postfix({'loss': loss.item()})
                 
+            # Gather loss from all processes
+            total_loss = self.accelerator.gather(torch.tensor(total_loss).to(self.device)).mean().item()
             avg_loss = total_loss / len(train_loader)
-            print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Average Loss: {avg_loss:.4f}")
+            
+            if self.accelerator.is_main_process:
+                print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Average Loss: {avg_loss:.4f}")
 
             # Evaluate model
             if (epoch + 1) % train_config['eval_interval'] == 0:
                 eval_loss = self.evaluate_model(model, test_dataset)
-                print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Evaluation Loss: {eval_loss:.4f}")
-                if eval_loss < pre_eval_loss:
-                    pre_eval_loss = eval_loss
-                    # Unwrap model before saving
-                    unwrapped_model = self.accelerator.unwrap_model(model)
-                    self.model_manager.save_model_to_local(unwrapped_model) 
-                    if train_config['upload_to_huggingface']:
-                        self.model_manager.upload_model_to_hub(unwrapped_model)
-                    early_stopping_counter = 0
-                else:
-                    early_stopping_counter += 1
-                    if early_stopping_counter >= train_config['early_stopping']:
-                        print(f"Early stopping at epoch {epoch+1}")
-                        break
+                if self.accelerator.is_main_process:
+                    print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Evaluation Loss: {eval_loss:.4f}")
+                    if eval_loss < pre_eval_loss:
+                        pre_eval_loss = eval_loss
+                        # Unwrap model before saving
+                        unwrapped_model = self.accelerator.unwrap_model(model)
+                        self.model_manager.save_model_to_local(unwrapped_model) 
+                        if train_config['upload_to_huggingface']:
+                            self.model_manager.upload_model_to_hub(unwrapped_model)
+                        early_stopping_counter = 0
+                    else:
+                        early_stopping_counter += 1
+                        if early_stopping_counter >= train_config['early_stopping']:
+                            print(f"Early stopping at epoch {epoch+1}")
+                            break
         
-            # Generate text
-            if (epoch + 1) % train_config['generate_text_steps'] == 0:
+            # Generate text only on main process
+            if self.accelerator.is_main_process and (epoch + 1) % train_config['generate_text_steps'] == 0:
                 text_generator = TextGenerator(self.config)
                 generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
                 print(f"Generated text at epoch {epoch+1}: {generated_text}")
+            
+            # Wait for all processes to sync up
+            self.accelerator.wait_for_everyone()
         
         return self.accelerator.unwrap_model(model)    
 
@@ -202,10 +223,20 @@ class GPT2ModelTrainer:
         total_loss = 0
         total_samples = 0
 
+        # Create sampler for distributed evaluation
+        eval_sampler = torch.utils.data.distributed.DistributedSampler(
+            dataset,
+            num_replicas=self.accelerator.num_processes,
+            rank=self.accelerator.process_index,
+            shuffle=False
+        )
+
         eval_loader = DataLoader(   
             dataset,
             batch_size=self.config['training']['per_device_eval_batch_size'],
-            shuffle=False
+            sampler=eval_sampler,
+            num_workers=self.config['training']['num_workers'],
+            pin_memory=True
         )
 
         # Prepare for distributed evaluation
@@ -220,6 +251,8 @@ class GPT2ModelTrainer:
                 total_samples += input_ids.size(0)
                 progress_bar.set_postfix({'loss': loss.item()})
 
+        # Gather and average loss across all processes
+        total_loss = self.accelerator.gather(torch.tensor(total_loss).to(self.device)).mean().item()
         avg_loss = total_loss / len(eval_loader)
         return avg_loss
 
@@ -470,6 +503,9 @@ class ModelManager:
 
 
 if __name__ == "__main__":
+    # Initialize accelerator
+    accelerator = Accelerator()
+
     # Load config
     config = load_config("train_config.yaml")
     
@@ -490,6 +526,7 @@ if __name__ == "__main__":
     # Train model
     model = trainer.train_model(model, dataset, dataset)
     
-    # Save checkpoint
-    model_manager.save_model_to_local(model)
+    # Save checkpoint only on main process
+    if accelerator.is_main_process:
+        model_manager.save_model_to_local(model)
 
