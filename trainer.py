@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # Load config files
     train_config = load_config("train_config.yaml")
     text_generator = TextGenerator(train_config)
-    generated_text = text_generator.generate_text("1", max_length=100)
+    generated_text = text_generator.generate_text("1234 1234 ", max_length=100)
     print(generated_text)
 
 
