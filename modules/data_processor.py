@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # Simple addition
     config = {"pre_processing": {"token_delimiter_type": "+"}}
     process_object = process(config)
-    string = "189 23456 1452 1234567890"
+    string = "189 23456 1452 1234567890 "
     print(process_object.pre_processing(string))
     print(process_object.post_processing(process_object.pre_processing(string)))
 
