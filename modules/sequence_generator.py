@@ -33,5 +33,5 @@ def generate_sequence(initial, mask, n):
 if __name__ == "__main__":
     # Example usage:
   # Fibonacci-like sequence: initial numbers [1, 2] and mask [1, 1]
-  my_sequence = generate_sequence([1,2], [1, 1], 10)
+  my_sequence = generate_sequence([1], [1, 1], 10)
   print(my_sequence)  # Output: [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]

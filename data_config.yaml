@@ -2,7 +2,7 @@
 
 mask:
   # Length of the binary mask sequence
-  length: 4
+  length: 2
   # Minimum number of ones required in the mask
   min_ones: 2
 
@@ -11,18 +11,18 @@ Initial:
   min_length: 1
   # Maximum length of the initial sequence  
   max_length: 1
-  # Minimum value for numbers in initial sequence
-  min_value: 0
-  # Maximum value for numbers in initial sequence
-  max_value: 20
+  # Minimum value for number in initial sequence
+  min_value: 1
+  # Maximum value for number in initial sequence
+  max_value: 99999
 
 sequence:
   # Output file path for generated sequences
   path: ../simple-llm-data/sequences.txt
   # Maximum length of generated sequences
-  max_length: 100
+  max_length: 50
   # Number of sequences to generate
-  max_rows: 100000
+  max_rows: "**" # Populate 100000 for 100000 sequences or ** for all sequences from min_length to max_length
   # Delimiter between columns in output file
   column_delimiter: "|"
   # Delimiter between rows in output file

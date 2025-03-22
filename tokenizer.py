@@ -1,4 +1,5 @@
 from modules.train_tokenizer import train_bpe_tokenizer
+from modules.data_processor import process
 import os
 import yaml
 
@@ -10,13 +11,18 @@ def data_preprocessing(function: callable, *args, **kwargs) :
 
     def extract_sequences(file_path: str, *args, **kwargs) :
         sequences = []
+
+        config = load_config("train_config.yaml")
+        process_object = process(config)
+
+
         with open(file_path, 'r') as f:
             for line in f:
                 parts = line.strip().split('|')
                 if len(parts) >= 3:
-                    sequences.append(parts[2].strip())
+                    sequences.append(process_object.pre_processing(parts[2].strip()))
 
-            # Write sequences to temporary file for tokenizer training
+        # Write sequences to temporary file for tokenizer training
         temp_file = 'temp_sequences.txt'
         with open(temp_file, 'w') as f:
             for seq in sequences:
@@ -37,7 +43,7 @@ def data_preprocessing(function: callable, *args, **kwargs) :
     return extract_sequences
 
 @data_preprocessing
-def build_tokenizer(file_path: str, vocab_size: int = 1000, output_dir: str = "../tokenizer") -> None:
+def build_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str = "../tokenizer") -> None:
     """
     Train a BPE tokenizer on input text file and save vocabulary and merge files
     
@@ -47,7 +53,7 @@ def build_tokenizer(file_path: str, vocab_size: int = 1000, output_dir: str = ".
         output_dir (str): Directory to save tokenizer files
     """
     print(f"Building tokenizer with file: {file_path} and output directory: {output_dir}")
-    train_bpe_tokenizer(file_path=file_path, vocab_size=vocab_size, output_dir=output_dir)
+    train_bpe_tokenizer(file_path=file_path, tokenizer_config=tokenizer_config, output_dir=output_dir)
 
 
 if __name__ == "__main__":
@@ -60,6 +66,6 @@ if __name__ == "__main__":
         build_tokenizer(
             file_path=data_config["sequence"]["path"], # Path to the input text file
             output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
-            vocab_size=train_config.get("tokenizer", {}).get("vocab_size", 1000)  # Default 1000 if not specified
+            tokenizer_config=train_config["tokenizer"]
         )
 
