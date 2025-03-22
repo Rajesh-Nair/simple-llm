@@ -440,25 +440,29 @@ class ModelManager:
 
     def upload_tokenizer_to_hub(self):
         """Upload tokenizer to Hugging Face Hub"""
-        # Login to Hugging Face Hub
-        hf_config = self.login_to_huggingface()
-        
-        # tokenizer path
-        tokenizer_path = os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file'])
-        
-        # Create/get the repo
-        repo = Repository(
-            local_dir=self.config['paths']['tokenizer_save_path'],
-            clone_from=f"{hf_config['username']}/{hf_config['model_name']}",
-            use_auth_token=hf_config['token']
-        )
-        
-        # Add tokenizer file and push
-        repo.git_add(tokenizer_path)
-        repo.push_to_hub(
-            commit_message=f"Upload tokenizer {self.config['paths']['tokenizer_file']}",
-            blocking=True
-        )
+        try:
+            # Login to Hugging Face Hub
+            hf_config = self.login_to_huggingface()
+            
+            # Get tokenizer file path
+            tokenizer_file = os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file'])
+            
+            # Upload single file to hub
+            from huggingface_hub import HfApi
+            api = HfApi()
+            api.upload_file(
+                path_or_fileobj=tokenizer_file,
+                path_in_repo=self.config['paths']['tokenizer_file'],
+                repo_id=f"{hf_config['username']}/{hf_config['model_name']}", 
+                token=hf_config['token'],
+                repo_type="model"
+            )
+            
+            print(f"Successfully uploaded tokenizer.json to {hf_config['remote_path']}")
+            
+        except Exception as e:
+            print(f"Error uploading tokenizer to Hugging Face Hub: {str(e)}")
+            raise
 
 
 if __name__ == "__main__":
