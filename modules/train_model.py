@@ -143,8 +143,11 @@ class GPT2ModelTrainer:
         if train_config['upload_to_huggingface'] and self.config['training']['load_checkpoint'] is None:
             self.model_manager.upload_fast_tokenizer_to_hub()
             self.model_manager.upload_tokenizer_to_hub()
-        
-        pre_eval_loss = float('inf')
+        try:
+            pre_eval_loss = self.evaluate_model(model, test_dataset)
+        except Exception as e:
+            print(f"Error evaluating model: {str(e)}")
+            pre_eval_loss = float('inf')
         for epoch in range(train_config['num_epochs']):
             model.train()
             total_loss = 0
