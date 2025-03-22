@@ -11,6 +11,7 @@ from huggingface_hub import login, Repository
 from accelerate import Accelerator
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
+from transformers import get_linear_schedule_with_warmup
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """Load configuration from yaml file"""
@@ -130,7 +131,8 @@ class GPT2ModelTrainer:
         
         optimizer = torch.optim.AdamW(
             model.parameters(), 
-            lr=train_config['learning_rate']
+            lr=train_config['learning_rate'],
+            weight_decay=train_config['weight_decay']
         )
         
         # Create sampler for distributed training
@@ -149,9 +151,19 @@ class GPT2ModelTrainer:
             pin_memory=True
         )
 
+        # Calculate total training steps
+        total_steps = len(train_loader) * train_config['num_epochs']
+        
+        # Create learning rate scheduler with warmup
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=train_config['warmup_steps'],
+            num_training_steps=total_steps
+        )
+
         # Prepare for distributed training
-        model, optimizer, train_loader = self.accelerator.prepare(
-            model, optimizer, train_loader
+        model, optimizer, train_loader, scheduler = self.accelerator.prepare(
+            model, optimizer, train_loader, scheduler
         )
 
         # Upload tokenizer to Hugging Face Hub when training from scratch
@@ -169,16 +181,24 @@ class GPT2ModelTrainer:
             total_loss = 0
             early_stopping_counter = 0
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
-            for input_ids, labels in progress_bar:
+            optimizer.zero_grad()  # Zero gradients at start of epoch
+            
+            for step, (input_ids, labels) in enumerate(progress_bar):
                 outputs = model(input_ids, labels=labels)
-                loss = outputs.loss
+                loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)
-                optimizer.step()
-                optimizer.zero_grad()
                 
-                total_loss += loss.item()
-                progress_bar.set_postfix({'loss': loss.item()})
+                # Only update weights after accumulating enough gradients
+                if (step + 1) % train_config['gradient_accumulation_steps'] == 0:
+                    # Clip gradients
+                    self.accelerator.clip_grad_norm_(model.parameters(), train_config['max_grad_norm'])
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
+                
+                total_loss += loss.item() * train_config['gradient_accumulation_steps']
+                progress_bar.set_postfix({'loss': loss.item() * train_config['gradient_accumulation_steps']})
                 
             # Gather loss from all processes
             total_loss = self.accelerator.gather(torch.tensor(total_loss).to(self.device)).mean().item()
