@@ -8,6 +8,7 @@ import yaml
 import os
 from tqdm import tqdm
 from huggingface_hub import login, Repository
+from accelerate import Accelerator
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """Load configuration from yaml file"""
@@ -49,7 +50,8 @@ class SequenceDataset(Dataset):
 class GPT2ModelTrainer:
     def __init__(self, config: dict):
         self.config = config
-        self.device = config['training']['device'] if torch.cuda.is_available() else 'cpu'
+        self.accelerator = Accelerator()
+        self.device = self.accelerator.device
         self.model_manager = ModelManager(config)
 
     def initialize_model(self) -> GPT2LMHeadModel:
@@ -113,7 +115,6 @@ class GPT2ModelTrainer:
             print(f"Total parameters: {total_params}")
             print(f"Trainable parameters: {trainable_params}")
 
-
             return model, tokenizer
 
     def train_model(
@@ -125,9 +126,6 @@ class GPT2ModelTrainer:
         """Train the GPT2 model on given dataset"""
         train_config = self.config['training']
         
-        model = model.to(self.device)
-        model.train()
-        
         optimizer = torch.optim.AdamW(
             model.parameters(), 
             lr=train_config['learning_rate']
@@ -135,8 +133,13 @@ class GPT2ModelTrainer:
         
         train_loader = DataLoader(
             train_dataset, 
-            batch_size=train_config['batch_size'], 
+            batch_size=train_config['per_device_batch_size'], 
             shuffle=True
+        )
+
+        # Prepare for distributed training
+        model, optimizer, train_loader = self.accelerator.prepare(
+            model, optimizer, train_loader
         )
 
         # Upload tokenizer to Hugging Face Hub when training from scratch
@@ -154,15 +157,12 @@ class GPT2ModelTrainer:
             early_stopping_counter = 0
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             for input_ids, labels in progress_bar:
-                input_ids = input_ids.to(self.device)
-                labels = labels.to(self.device)
-                
                 outputs = model(input_ids, labels=labels)
                 loss = outputs.loss
                 
-                optimizer.zero_grad()
-                loss.backward()
+                self.accelerator.backward(loss)
                 optimizer.step()
+                optimizer.zero_grad()
                 
                 total_loss += loss.item()
                 progress_bar.set_postfix({'loss': loss.item()})
@@ -176,9 +176,11 @@ class GPT2ModelTrainer:
                 print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Evaluation Loss: {eval_loss:.4f}")
                 if eval_loss < pre_eval_loss:
                     pre_eval_loss = eval_loss
-                    self.model_manager.save_model_to_local(model) 
+                    # Unwrap model before saving
+                    unwrapped_model = self.accelerator.unwrap_model(model)
+                    self.model_manager.save_model_to_local(unwrapped_model) 
                     if train_config['upload_to_huggingface']:
-                        self.model_manager.upload_model_to_hub(model)
+                        self.model_manager.upload_model_to_hub(unwrapped_model)
                     early_stopping_counter = 0
                 else:
                     early_stopping_counter += 1
@@ -192,28 +194,26 @@ class GPT2ModelTrainer:
                 generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
                 print(f"Generated text at epoch {epoch+1}: {generated_text}")
         
-        return model    
-
-
+        return self.accelerator.unwrap_model(model)    
 
     def evaluate_model(self, model: GPT2LMHeadModel, dataset: Dataset) -> float:
         """Evaluate the model on the given dataset"""
-        model = model.to(self.device)
         model.eval()
         total_loss = 0
         total_samples = 0
 
         eval_loader = DataLoader(   
             dataset,
-            batch_size=self.config['training']['eval_batch_size'],
+            batch_size=self.config['training']['per_device_eval_batch_size'],
             shuffle=False
         )
+
+        # Prepare for distributed evaluation
+        eval_loader = self.accelerator.prepare(eval_loader)
 
         with torch.no_grad():
             progress_bar = tqdm(eval_loader, desc='Evaluating')
             for input_ids, labels in progress_bar:
-                input_ids = input_ids.to(self.device)
-                labels = labels.to(self.device)
                 outputs = model(input_ids, labels=labels)
                 loss = outputs.loss
                 total_loss += loss.item()
@@ -226,7 +226,8 @@ class GPT2ModelTrainer:
 class TextGenerator:
     def __init__(self, config: dict):
         self.config = config
-        self.device = config['training']['device'] if torch.cuda.is_available() else 'cpu'
+        self.accelerator = Accelerator()
+        self.device = self.accelerator.device
         self.model_manager = ModelManager(config)
         self.model, self.tokenizer = self.model_manager.load_checkpoint_from_local()
         self.model = self.model.to(self.device)
