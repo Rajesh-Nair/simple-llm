@@ -225,7 +225,7 @@ class TextGenerator:
         self.config = config
         self.device = config['training']['device'] if torch.cuda.is_available() else 'cpu'
         self.model_manager = ModelManager(config)
-        self.model, self.tokenizer = self.model_manager.load_checkpoint_fromlocal()
+        self.model, self.tokenizer = self.model_manager.load_checkpoint_from_local()
         self.model = self.model.to(self.device)
         self.model.eval()
         self.processor = process(config)
