@@ -11,12 +11,14 @@ cp secret_templaye.yaml secret.yaml
 
 # Change the token in the secret.yaml file under github and huggingface sections
 
+
+# Install dependencies
+pip install -r requirements.txt
+
 # cache the credentials
 git config --global credential.helper store
 huggingface-cli login
 
-# Install dependencies
-pip install -r requirements.txt
 
 # Data Generation
 python3 data_generator.py
