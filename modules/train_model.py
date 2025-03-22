@@ -217,7 +217,7 @@ class GPT2ModelTrainer:
                 total_samples += input_ids.size(0)
                 progress_bar.set_postfix({'loss': loss.item()})
 
-        avg_loss = total_loss / total_samples
+        avg_loss = total_loss / len(eval_loader)
         return avg_loss
 
 class TextGenerator:
