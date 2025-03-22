@@ -144,10 +144,10 @@ class GPT2ModelTrainer:
             self.model_manager.upload_fast_tokenizer_to_hub()
             self.model_manager.upload_tokenizer_to_hub()
         
+        pre_eval_loss = float('inf')
         for epoch in range(train_config['num_epochs']):
             model.train()
             total_loss = 0
-            pre_eval_loss = float('inf')
             early_stopping_counter = 0
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             for input_ids, labels in progress_bar:
