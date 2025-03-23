@@ -1,5 +1,5 @@
 *.ipynb
-data/*
+wandb/*
 */__pycache__/*
 secret.yaml
 

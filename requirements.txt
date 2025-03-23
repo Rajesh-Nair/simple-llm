@@ -1,5 +1,6 @@
 torch
 transformers
+tokenizers
 datasets
 tqdm
 pyyaml

@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Download from Git
-git clone -b COT https://$GITHUB_TOKEN@github.com/Rajesh-Nair/simple-llm.git
+git clone -b accelerate https://$GITHUB_TOKEN@github.com/Rajesh-Nair/simple-llm.git
 
 # Go to the project
 cd simple-llm
