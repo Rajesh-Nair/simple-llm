@@ -1,13 +1,13 @@
 # Sample train_config.yaml:
 
 paths:
-  model_save_path: "../simple-llm-gpt2-v1.0" # Path to save the model
-  model_load_path: "../simple-llm-gpt2-v1.0" # Path to load the model
-  tokenizer_save_path: "../simple-llm-gpt2-v1.0" # Path to save the tokenizer
+  model_save_path: "../simple-llm-gpt2-v2.0" # Path to save the model
+  model_load_path: "../simple-llm-gpt2-v2.0" # Path to load the model
+  tokenizer_save_path: "../simple-llm-gpt2-v2.0" # Path to save the tokenizer
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
-  token_delimiter_type : "+" # "chain_of_thought"
+  token_delimiter_type : "chain_of_thought" # "+"
 
 
 tokenizer:
@@ -32,10 +32,10 @@ model:
   eos_token_id : None # End of sequence token id
 
 training:
-  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0 # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
+  load_checkpoint: null # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
   per_device_batch_size: 256 # Batch size
   learning_rate: 0.00005 # Learning rate
-  num_epochs: 100 # Number of epochs
+  num_epochs: 300 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
   num_workers: 1 # Number of workers - single node
   warmup_steps: 100 # Warmup steps
@@ -45,14 +45,14 @@ training:
   eval_interval: 1 # Evaluation interval and save interval
   per_device_eval_batch_size: 256 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
-  upload_to_huggingface: false # Upload to Hugging Face Hub
+  upload_to_huggingface: True # Upload to Hugging Face Hub
   generate_text_steps : 5 # Generate text steps
-  generate_text_length : 100 # Generate text length
+  generate_text_length : 512 # Generate text length
   generate_text_input : "1 1 2 3 5 8 " # Generate text input
 
 wandb:
   enabled: True # Enable wandb
-  project_name: "simple-llm-gpt2-v1.0" # Wandb project name
+  project_name: "simple-llm-gpt2-v2.0" # Wandb project name
   entity: "mirajnair" # Wandb entity
 
 
