@@ -169,10 +169,12 @@ class GPT2ModelTrainer:
         total_steps = len(train_loader) * train_config['num_epochs']
         
         # Create learning rate scheduler with warmup
+        # total_steps = num_epochs * steps_per_epoch, where steps_per_epoch = len(train_loader)
+        # This means each step is one batch of training data
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=train_config['warmup_steps'],
-            num_training_steps=total_steps
+            num_warmup_steps=train_config['warmup_steps'], 
+            num_training_steps=total_steps  # total_steps = num_epochs * len(train_loader)
         )
 
         # Prepare for distributed training
