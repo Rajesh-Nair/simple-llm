@@ -92,6 +92,8 @@ class GPT2ModelTrainer:
                 self.model_manager.save_fast_tokenizer_to_local(tokenizer)
                 self.vocab_size = tokenizer.vocab_size
 
+            # Store tokenizer
+            self.tokenizer = tokenizer
             return model, tokenizer
         
         # Load from local checkpoint
@@ -99,6 +101,9 @@ class GPT2ModelTrainer:
             print(f"Loading checkpoint from {self.config['training']['load_checkpoint']}")
             model, tokenizer = self.model_manager.load_checkpoint_from_local()
             self.vocab_size = tokenizer.vocab_size
+
+            # Store tokenizer
+            self.tokenizer = tokenizer
             return model, tokenizer
         
         # Load from local tokenizer and initialize new model
@@ -132,6 +137,8 @@ class GPT2ModelTrainer:
             print(f"Total parameters: {total_params}")
             print(f"Trainable parameters: {trainable_params}")
 
+            # Store tokenizer
+            self.tokenizer = tokenizer
             return model, tokenizer
 
     def train_model(
@@ -262,7 +269,7 @@ class GPT2ModelTrainer:
             # Generate text only on main process
             if self.accelerator.is_main_process and (epoch + 1) % train_config['generate_text_steps'] == 0:
                 text_generator = TextGenerator(self.config)
-                generated_text = text_generator.generate_text(train_config['generate_text_input'], model=model,tokenizer=tokenizer, max_length=train_config['generate_text_length'])
+                generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
                 print(f"Generated text at epoch {epoch+1}: {generated_text}")
                 
                 # Log generated text to wandb if enabled
@@ -323,20 +330,23 @@ class GPT2ModelTrainer:
 class TextGenerator:
     def __init__(self, config: dict):
         self.config = config
-        self.processor = process(self.config)
+        self.accelerator = Accelerator()
+        self.device = self.accelerator.device
+        self.model_manager = ModelManager(config)
+        self.model, self.tokenizer = self.model_manager.load_checkpoint_from_local()
+        self.model = self.model.to(self.device)
+        self.model.eval()
+        self.processor = process(config)
 
-
-    def generate_text(self, prompt: str, model: GPT2LMHeadModel, tokenizer, max_length: int = None) -> str:
+    def generate_text(self, prompt: str, max_length: int = None) -> str:
         """Generate text using the loaded model"""
         if max_length is None:
             max_length = self.config['model']['n_positions']
 
         # PreTrainedTokenizerFast returns input_ids directly
-        input_ids = torch.tensor([tokenizer.encode(self.processor.pre_processing(prompt))]).to(self.device)
+        input_ids = torch.tensor([self.tokenizer.encode(self.processor.pre_processing(prompt))]).to(self.device)
         attention_mask = torch.ones_like(input_ids)
 
-        # Evaluation
-        model.eval()
         with torch.no_grad():
             if max_length > self.config['model']['n_positions']:
                 outputs = input_ids  # Start with the prompt
@@ -348,7 +358,7 @@ class TextGenerator:
                     context_mask = torch.ones_like(context)
                     
                     # Generate next token
-                    output = model.generate(
+                    output = self.model.generate(
                         context,
                         max_length=context.size(1) + 1,  # Only generate one new token
                         attention_mask=context_mask,
@@ -365,7 +375,7 @@ class TextGenerator:
                     outputs = torch.cat([outputs, new_token], dim=1)
                     i += 1
             else :
-                outputs = model.generate(
+                outputs = self.model.generate(
                     input_ids,
                     max_length=max_length,
                     attention_mask=attention_mask,
@@ -376,7 +386,7 @@ class TextGenerator:
                     top_p=0.95,
                     temperature=0.01
                 )
-        return self.processor.post_processing(tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ", ""))
+        return self.processor.post_processing(self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ", ""))
 
 
 
