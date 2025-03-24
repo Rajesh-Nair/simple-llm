@@ -198,11 +198,11 @@ class GPT2ModelTrainer:
         except Exception as e:
             print(f"Error evaluating model: {str(e)}")
             pre_eval_loss = float('inf')
+        early_stopping_counter = 0
         for epoch in range(train_config['num_epochs']):
             model.train()
             train_sampler.set_epoch(epoch)  # Important for proper shuffling
             total_loss = 0
-            early_stopping_counter = 0
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             optimizer.zero_grad()  # Zero gradients at start of epoch
             
