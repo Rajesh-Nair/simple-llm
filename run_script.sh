@@ -19,6 +19,8 @@ pip install -r requirements.txt
 git config --global credential.helper store
 huggingface-cli login
 
+# set tokenizer parallelism
+export TOKENIZERS_PARALLELISM=true
 
 # Data Generation
 python3 data_generator.py
@@ -27,7 +29,7 @@ python3 data_generator.py
 python3 tokenizer.py
 
 # Training
-python3 trainer.py
+accelerate launch python3 trainer.py
 
 
 # Add all files to git
