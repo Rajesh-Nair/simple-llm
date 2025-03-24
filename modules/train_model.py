@@ -319,7 +319,7 @@ class GPT2ModelTrainer:
         total_loss = self.accelerator.gather(torch.tensor(total_loss).to(self.device)).mean().item()
         avg_loss = total_loss / len(eval_loader)
         return avg_loss
-
+ 
 class TextGenerator:
     def __init__(self, config: dict):
         self.config = config

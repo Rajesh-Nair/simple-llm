@@ -29,7 +29,8 @@ python3 data_generator.py
 python3 tokenizer.py
 
 # Training
-accelerate launch python3 trainer.py
+accelerate config
+accelerate launch trainer.py
 
 
 # Add all files to git
