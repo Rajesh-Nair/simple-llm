@@ -29,13 +29,5 @@ python3 data_generator.py
 python3 tokenizer.py
 
 # Training
-accelerate config
-accelerate launch trainer.py
-
-
-# Add all files to git
-git add .
-git commit -m "Update model"
-git push
-
+accelerate launch --config_file "accelerate_config" trainer.py
 
