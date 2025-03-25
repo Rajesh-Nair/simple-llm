@@ -267,7 +267,7 @@ class GPT2ModelTrainer:
                             break
         
             # Generate text only on main process
-            if self.accelerator.is_main_process and (epoch + 1) % train_config['generate_text_steps'] == 0:
+            if self.accelerator.is_main_process and train_config['generate_text_steps'] and (epoch + 1) % train_config['generate_text_steps'] == 0:
                 text_generator = TextGenerator(self.config)
                 generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
                 print(f"Generated text at epoch {epoch+1}: {generated_text}")

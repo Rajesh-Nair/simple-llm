@@ -46,7 +46,7 @@ training:
   per_device_eval_batch_size: 128 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
   upload_to_huggingface: True # Upload to Hugging Face Hub
-  generate_text_steps : 5 # Generate text steps
+  generate_text_steps : null # Generate text steps
   generate_text_length : 512 # Generate text length
   generate_text_input : "1 1 2 3 5 8 " # Generate text input
 
