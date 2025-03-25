@@ -39,7 +39,7 @@ training:
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
   num_workers: 2 # Number of workers - single node
   warmup_steps: 100 # Warmup steps
-  gradient_accumulation_steps: 1  # Gradient accumulation steps
+  gradient_accumulation_steps: 2  # Gradient accumulation steps
   max_grad_norm: 1.0 # Maximum gradient norm
   weight_decay: 0.01 # Weight decay
   eval_interval: 1 # Evaluation interval and save interval
