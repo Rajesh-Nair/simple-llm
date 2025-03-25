@@ -29,5 +29,5 @@ python3 data_generator.py
 python3 tokenizer.py
 
 # Training
-accelerate launch --config_file "accelerate_config" trainer.py
+accelerate launch --config_file "accelerate_config.yaml" trainer.py
 
