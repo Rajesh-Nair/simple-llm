@@ -286,7 +286,7 @@ class GPT2ModelTrainer:
         if self.config.get('wandb', {}).get('enabled', False) and self.accelerator.is_main_process:
             wandb.finish()
             
-        return self.accelerator.unwrap_model(model)    
+            
 
     def evaluate_model(self, model: GPT2LMHeadModel, dataset: Dataset) -> float:
         """Evaluate the model on the given dataset"""
@@ -414,9 +414,5 @@ if __name__ == "__main__":
     dataset = SequenceDataset(sequences, tokenizer, max_length=config['model']['n_positions'])
 
     # Train model
-    model = trainer.train_model(model, dataset, dataset)
+    trainer.train_model(model, dataset, dataset)
     
-    # Save checkpoint only on main process
-    if accelerator.is_main_process:
-        model_manager.save_model_to_local(model)
-
