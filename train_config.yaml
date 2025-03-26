@@ -7,7 +7,7 @@ paths:
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
-  token_delimiter_type : "+" ; "chain_of_thought" # "+"
+  token_delimiter_type : "+" # "chain_of_thought" # "+"
 
 
 tokenizer:
