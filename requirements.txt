@@ -1,6 +1,8 @@
 torch
 transformers
+tokenizers
 datasets
 tqdm
 pyyaml
-
+accelerate
+wandb
