@@ -11,6 +11,7 @@ from tqdm import tqdm
 from accelerate import Accelerator
 from transformers import get_linear_schedule_with_warmup
 import wandb
+import gc  # Add garbage collector import
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """Load configuration from yaml file"""
@@ -266,10 +267,19 @@ class GPT2ModelTrainer:
                         early_stopping_counter += 1
                         if early_stopping_counter >= train_config['early_stopping']:
                             print(f"Early stopping at epoch {epoch+1}")
+                            # Clear CUDA cache and run garbage collection
+                            if torch.cuda.is_available():
+                                torch.cuda.empty_cache()
+                            gc.collect()
                             break
         
             # Generate text only on main process
             if self.accelerator.is_main_process and train_config['generate_text_steps'] and (epoch + 1) % train_config['generate_text_steps'] == 0:
+                # Clear CUDA cache before text generation
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                
                 text_generator = TextGenerator(self.config)
                 generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
                 print(f"Generated text at epoch {epoch+1}: {generated_text}")
@@ -280,6 +290,12 @@ class GPT2ModelTrainer:
                         "generated_text": generated_text,
                         "epoch": epoch
                     })
+                
+                # Clear memory after text generation
+                del text_generator
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
             
             # Wait for all processes to sync up
             self.accelerator.wait_for_everyone()
@@ -345,50 +361,55 @@ class TextGenerator:
         if max_length is None:
             max_length = self.config['model']['n_positions']
 
-        # PreTrainedTokenizerFast returns input_ids directly
-        input_ids = torch.tensor([self.tokenizer.encode(self.processor.pre_processing(prompt))]).to(self.device)
-        attention_mask = torch.ones_like(input_ids)
+        # Preprocess and encode prompt
+        processed_prompt = self.processor.pre_processing(prompt)
+        input_ids = self.tokenizer.encode(processed_prompt)
+        
+        # Pad to model position length, aligning tokens to right
+        pad_length = self.config['model']['n_positions'] - len(input_ids)
+        padded_input = [self.tokenizer.pad_token_id] * pad_length + input_ids
+        
+        # Convert to tensor and move to device
+        input_tensor = torch.tensor([padded_input]).to(self.device)
+        attention_mask = torch.tensor([[0] * pad_length + [1] * len(input_ids)]).to(self.device)
 
         with torch.no_grad():
-            if max_length > self.config['model']['n_positions']:
-                outputs = input_ids  # Start with the prompt
-                i = 0
-                while outputs.size(1) < max_length and i < 150: #Max 150 tokens
-                    # Get the last n_positions-1 tokens as context
-                    context = outputs[:, -(self.config['model']['n_positions']-1):]
-                    # Update attention mask for the context
-                    context_mask = torch.ones_like(context)
-                    
-                    # Generate next token
-                    output = self.model.generate(
-                        context,
-                        max_length=context.size(1) + 1,  # Only generate one new token
-                        attention_mask=context_mask,
-                        bos_token_id=None,
-                        eos_token_id=None,
-                        do_sample=True,
-                        top_k=1,
-                        top_p=0.95,
-                        temperature=0.01
-                    )
-                    
-                    # Append only the newly generated token
-                    new_token = output[:, -1:]
-                    outputs = torch.cat([outputs, new_token], dim=1)
-                    i += 1
-            else :
-                outputs = self.model.generate(
-                    input_ids,
-                    max_length=max_length,
-                    attention_mask=attention_mask,
-                    bos_token_id=None,  # Set to None since config has 'None' as string
-                    eos_token_id=None,  # Set to None since config has 'None' as string 
+            outputs = input_tensor
+            generated = []
+            
+            for _ in range(max_length):
+                # Generate next token
+                output = self.model.generate(
+                    outputs,
+                    max_length=outputs.size(1) + 1,
+                    attention_mask=attention_mask, 
+                    bos_token_id=None,
+                    eos_token_id=None,
                     do_sample=True,
                     top_k=1,
                     top_p=0.95,
                     temperature=0.01
                 )
-        return self.processor.post_processing(self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ", ""))
+                
+                # Get the new token
+                new_token = output[0, -1].item()
+                generated.append(new_token)
+                
+                # Shift everything left and add new token on right
+                outputs = torch.cat([
+                    outputs[:, 1:],
+                    output[:, -1:] 
+                ], dim=1)
+                
+                # Update attention mask
+                attention_mask = torch.cat([
+                    attention_mask[:, 1:],
+                    torch.ones((1,1)).to(self.device)
+                ], dim=1)
+
+        # Decode only the generated tokens
+        generated_text = self.tokenizer.decode(generated, skip_special_tokens=True)
+        return self.processor.post_processing(generated_text.replace(" ", ""))
 
 
 
