@@ -23,7 +23,7 @@ def data_preprocessing(file_path: str, processor: process) :
                 max_length = train_config["pre_processing"]["effective_context_length"] + 1
                 for i in range(max(0, len(sequence) - max_length)+1):
                     seq = sequence[i:i+max_length]
-                    if len(re.findall(train_config["pre_processing"]["token_delimiter_type"], seq)) >= 3:
+                    if len(re.findall(re.escape(train_config["pre_processing"]["token_delimiter_type"]), seq)) >= 3:
                         sequences.append(seq)
     return sequences
 
