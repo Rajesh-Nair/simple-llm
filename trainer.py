@@ -2,6 +2,7 @@ from tokenizers import Tokenizer
 from modules.train_model import ModelManager, GPT2ModelTrainer, SequenceDataset, TextGenerator
 from modules.data_processor import process
 import yaml
+import re
 
 # function to load config files
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -18,7 +19,12 @@ def data_preprocessing(file_path: str, processor: process) :
         for line in f:
             parts = line.strip().split('|')
             if len(parts) >= 3:
-                sequences.append(processor.pre_processing(parts[2].strip()))
+                sequence = processor.pre_processing(parts[2].strip()+" ")
+                max_length = train_config["pre_processing"]["effective_context_length"] + 1
+                for i in range(max(0, len(sequence) - max_length)+1):
+                    seq = sequence[i:i+max_length]
+                    if len(re.findall(train_config["pre_processing"]["token_delimiter_type"], seq)) >= 3:
+                        sequences.append(seq)
     return sequences
 
 def train(train_config_path: str = "train_config.yaml", data_config_path: str = "data_config.yaml"):

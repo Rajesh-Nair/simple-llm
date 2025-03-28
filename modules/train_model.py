@@ -32,16 +32,18 @@ class SequenceDataset(Dataset):
     def __getitem__(self, idx):
         sequence = self.sequences[idx]
         # PreTrainedTokenizerFast returns a dictionary with 'input_ids'
-        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length')
+        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length', padding_side='left')
         
-        # Get input_ids from the encoding dictionary
+        # Get input_ids and create attention mask
         input_ids = encoding['input_ids']
+        attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in input_ids]
             
         # Split into input and target - target is shifted by 1
         x = torch.tensor(input_ids[:-1])  # Input sequence
         y = torch.tensor(input_ids[1:])   # Target sequence
+        mask = torch.tensor(attention_mask[:-1])  # Attention mask for input
             
-        return x, y
+        return x, y, mask
     
     def split_train_test(self, test_size: float = 0.2, random_state: int = 42) -> Tuple[Dataset, Dataset]:
         """Split the dataset into train and test sets"""
@@ -206,8 +208,8 @@ class GPT2ModelTrainer:
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             optimizer.zero_grad()  # Zero gradients at start of epoch
             
-            for step, (input_ids, labels) in enumerate(progress_bar):
-                outputs = model(input_ids, labels=labels)
+            for step, (input_ids, labels, attention_mask) in enumerate(progress_bar):
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)
@@ -315,8 +317,8 @@ class GPT2ModelTrainer:
 
         with torch.no_grad():
             progress_bar = tqdm(eval_loader, desc='Evaluating')
-            for input_ids, labels in progress_bar:
-                outputs = model(input_ids, labels=labels)
+            for input_ids, labels, attention_mask in progress_bar:
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss
                 total_loss += loss.item()
                 total_samples += input_ids.size(0)
@@ -415,4 +417,3 @@ if __name__ == "__main__":
 
     # Train model
     trainer.train_model(model, dataset, dataset)
-    
