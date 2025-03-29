@@ -77,6 +77,11 @@ def generate_data(config):
             if i == config["Initial"]["max_value"]:
                 min_length_fullsequence = max(min_length_fullsequence, len(row[2]))
                 print(f"Length of full sequence: {min_length_fullsequence}")
+            for max_len in range(config["sequence"]["max_length"]):
+                sequence = generate_sequence(initial, mask,max_len, 0)
+                row = [mask, initial, " ".join(str(x) for x in sequence)]
+                data.append(row)
+
 
     else :
         for i in tqdm(range(config["sequence"]["max_rows"])):
