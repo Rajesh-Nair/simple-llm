@@ -302,7 +302,13 @@ class GPT2ModelTrainer:
         
         # Finish wandb run if enabled
         if self.config.get('wandb', {}).get('enabled', False) and self.accelerator.is_main_process:
+            # Wait for all processes to sync before finishing wandb
+            self.accelerator.wait_for_everyone()
             wandb.finish()
+            # Clear any remaining CUDA cache
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            gc.collect()
             
             
 
