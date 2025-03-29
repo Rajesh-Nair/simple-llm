@@ -20,7 +20,7 @@ sequence:
   # Output file path for generated sequences
   path: ../simple-llm-data/sequences.txt
   # Maximum length of generated sequences
-  max_length: 50
+  max_length: 30
   # Number of sequences to generate
   max_rows: "**" # Populate 100000 for 100000 sequences or ** for all sequences from min_length to max_length
   # Delimiter between columns in output file
