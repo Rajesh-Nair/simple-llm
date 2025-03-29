@@ -9,7 +9,7 @@ import yaml
 import os
 from tqdm import tqdm
 from accelerate import Accelerator
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_cosine_schedule_with_warmup
 import wandb
 import gc  # Add garbage collector import
 
@@ -178,13 +178,11 @@ class GPT2ModelTrainer:
         # Calculate total training steps
         total_steps = len(train_loader) * train_config['num_epochs']
         
-        # Create learning rate scheduler with warmup
-        # total_steps = num_epochs * steps_per_epoch, where steps_per_epoch = len(train_loader)
-        # This means each step is one batch of training data
-        scheduler = get_linear_schedule_with_warmup(
+        # Create cosine learning rate scheduler with warmup
+        scheduler = get_cosine_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=train_config['warmup_steps'], 
-            num_training_steps=total_steps  # total_steps = num_epochs * len(train_loader)
+            num_warmup_steps=train_config['warmup_steps'],
+            num_training_steps=total_steps
         )
 
         # Prepare for distributed training
@@ -305,7 +303,10 @@ class GPT2ModelTrainer:
             try:
                 # Wait for all processes to sync before finishing wandb
                 self.accelerator.wait_for_everyone()
-                wandb.finish()
+                wandb.finish(quiet=True)  # Add quiet=True to avoid hanging
+                wandb.finish(exit_code=0) # Force finish with exit code
+            except Exception as e:
+                print(f"Error finishing wandb: {e}")
             finally:
                 # Ensure cleanup happens even if wandb finish fails
                 # Clear any remaining CUDA cache and memory
