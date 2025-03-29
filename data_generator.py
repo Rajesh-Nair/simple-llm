@@ -65,20 +65,24 @@ def generate_data(config):
     """
     data = []
     print(f"Generating {config['sequence']['max_rows']} sequences")
+    min_length_fullsequence = 0
     # Generate all sequences from min_value to max_value
     if config["sequence"]["max_rows"] == "**":
-        for i in range(config["Initial"]["min_value"], config["Initial"]["max_value"]+1):
+        for i in tqdm(range(config["Initial"]["max_value"], config["Initial"]["min_value"]-1, -1)):
             initial = [i]
             mask = generate_mask(config)
-            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
+            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"], min_length_fullsequence)
             row = [mask, initial, " ".join(str(x) for x in sequence)]
             data.append(row)
+            if i == config["Initial"]["max_value"]:
+                min_length_fullsequence = max(min_length_fullsequence, len(row[2]))
+                print(f"Length of full sequence: {min_length_fullsequence}")
 
     else :
         for i in tqdm(range(config["sequence"]["max_rows"])):
             mask = generate_mask(config)
             initial = generate_initial(config)
-            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
+            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"],min_length_fullsequence)
             row = [mask, initial, " ".join(str(x) for x in sequence)]
             data.append(row)
     return data

@@ -1,4 +1,4 @@
-def generate_sequence(initial, mask, n):
+def generate_sequence(initial, mask, n, min_length=0):
     """
     Generates a sequence using a custom recurrence relation.
 
@@ -11,13 +11,16 @@ def generate_sequence(initial, mask, n):
       mask (list): List of 0s and 1s indicating which of the previous
                    numbers to include in the sum.
       n (int): Total number of sequence elements to generate (including the initial ones).
+      min_length (int): Minimum total string length of sequence when joined with spaces.
 
     Returns:
       list: The generated sequence of numbers.
     """
 
     seq = initial.copy()
-    while len(seq) < n :
+    total_length = len(" ".join(str(x) for x in seq))
+    
+    while len(seq) < n or total_length < min_length:
         # Get the last len(mask) elements from the sequence
         if len(seq) < len(mask):
             # Pad with zeros if sequence is shorter than mask
@@ -27,6 +30,7 @@ def generate_sequence(initial, mask, n):
         # Calculate the next number using the mask (only add numbers where mask is 1)
         next_val = sum(num for num, m in zip(last_elements, mask) if m == 1)
         seq.append(next_val)
+        total_length += len(str(next_val)) + 1  # Add length of new number plus space
     return seq
 
 
