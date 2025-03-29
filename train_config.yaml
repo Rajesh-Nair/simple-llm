@@ -1,14 +1,14 @@
 # Sample train_config.yaml:
 
 paths:
-  model_save_path: "../simple-llm-gpt2-v1.0" # Path to save the model
-  model_load_path: "../simple-llm-gpt2-v1.0" # Path to load the model
-  tokenizer_save_path: "../simple-llm-gpt2-v1.0" # Path to save the tokenizer
+  model_save_path: "../simple-llm-gpt2-v2.0" # Path to save the model
+  model_load_path: "../simple-llm-gpt2-v2.0" # Path to load the model
+  tokenizer_save_path: "../simple-llm-gpt2-v2.0" # Path to save the tokenizer
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
   token_delimiter_type : "+" # "chain_of_thought" # "+"
-  effective_context_length : 512
+  effective_context_length : 64
 
 
 tokenizer:
@@ -20,7 +20,7 @@ tokenizer:
   #continuing_subword_prefix: "##"
 
 model:
-  n_positions: 512      # Maximum sequence length
+  n_positions: 64      # Maximum sequence length
   n_embd: 256          # Embedding dimension
   n_layer: 8           # Number of transformer layers
   n_head: 4            # Number of attention heads
@@ -33,13 +33,13 @@ model:
   eos_token_id : None # End of sequence token id
 
 training:
-  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0 # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
+  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
   per_device_batch_size: 128 # Batch size
-  learning_rate: 0.00004 # Learning rate
-  num_epochs: 50 # Number of epochs
+  learning_rate: 0.00005 # Learning rate
+  num_epochs: 300 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
   num_workers: 2 # Number of workers - single node
-  warmup_steps: 50 # Warmup steps
+  warmup_steps: 100 # Warmup steps
   gradient_accumulation_steps: 2  # Gradient accumulation steps
   max_grad_norm: 1.0 # Maximum gradient norm
   weight_decay: 0.2 # Weight decay
@@ -53,7 +53,7 @@ training:
 
 wandb:
   enabled: True # Enable wandb
-  project_name: "simple-llm-gpt2-v1.0" # Wandb project name
+  project_name: "simple-llm-gpt2-v2.0" # Wandb project name
   entity: "mirajnair" # Wandb entity
 
 

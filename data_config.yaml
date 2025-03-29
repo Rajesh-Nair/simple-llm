@@ -14,7 +14,7 @@ Initial:
   # Minimum value for number in initial sequence
   min_value: 1
   # Maximum value for number in initial sequence
-  max_value: 8000 #99999
+  max_value: 4000 #99999
 
 sequence:
   # Output file path for generated sequences
