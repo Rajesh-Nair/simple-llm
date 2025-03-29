@@ -302,14 +302,27 @@ class GPT2ModelTrainer:
         
         # Finish wandb run if enabled
         if self.config.get('wandb', {}).get('enabled', False) and self.accelerator.is_main_process:
-            # Wait for all processes to sync before finishing wandb
-            self.accelerator.wait_for_everyone()
-            wandb.finish()
-            # Clear any remaining CUDA cache
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect()
-            
+            try:
+                # Wait for all processes to sync before finishing wandb
+                self.accelerator.wait_for_everyone()
+                wandb.finish()
+            finally:
+                # Ensure cleanup happens even if wandb finish fails
+                # Clear any remaining CUDA cache and memory
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize() # Make sure GPU operations are finished
+                gc.collect()
+                
+                # Force close any remaining wandb processes
+                try:
+                    wandb.finish(exit_code=0, quiet=True)
+                except:
+                    pass
+                
+                # Kill any zombie processes
+                if hasattr(wandb, '_teardown'):
+                    wandb._teardown()
             
 
     def evaluate_model(self, model: GPT2LMHeadModel, dataset: Dataset) -> float:
