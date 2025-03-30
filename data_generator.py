@@ -1,5 +1,5 @@
 # Import required modules
-from modules.sequence_generator import generate_sequence
+from modules.sequence_generator import *
 import yaml
 import random
 from tqdm import tqdm
@@ -30,28 +30,15 @@ def generate_mask(config):
     Returns:
         list: Binary mask of specified length with minimum number of ones
     """
-    if config["mask"]["length"] == config["Initial"]["max_length"]:
-        mask = [1] * config["mask"]["length"]
+    if config["series"]["mask_length"] <= config["series"]["mask_min_elements"]:
+        mask = [1] * config["series"]["mask_length"]
     else:
-        mask = [random.randint(0, 1) for _ in range(config["mask"]["length"])]
+        mask = [random.randint(0, 1) for _ in range(config["series"]["mask_length"])]
         # Recursively regenerate if mask doesn't have minimum required ones
-        if sum(mask) < config["mask"]["min_ones"]:
+        if sum(mask) < config["series"]["mask_min_elements"]:   
             mask = generate_mask(config)
     return mask
 
-def generate_initial(config):
-    """
-    Generate initial sequence values according to config parameters
-    
-    Args:
-        config (dict): Configuration containing initial sequence parameters
-        
-    Returns:
-        list: Initial sequence values within specified range
-    """
-    initial_length = random.randint(config["Initial"]["min_length"], config["Initial"]["max_length"])
-    initial = [random.randint(config["Initial"]["min_value"], config["Initial"]["max_value"]) for _ in range(initial_length)]
-    return initial
 
 def generate_data(config):
     """
@@ -64,32 +51,39 @@ def generate_data(config):
         list: Generated sequence according to specified parameters
     """
     data = []
-    print(f"Generating {config['sequence']['max_rows']} sequences")
-    min_length_fullsequence = 0
+    print(f"Generating {config['series']['max_rows']} sequences")
+    total_nums = 0
+    
     # Generate all sequences from min_value to max_value
-    if config["sequence"]["max_rows"] == "**":
-        for i in tqdm(range(config["Initial"]["max_value"], config["Initial"]["min_value"]-1, -1)):
+    if config["data_generator"]["sequence_type"] == "sum":
+        rows = generate_sum(config["sum"]["min_value"], config["sum"]["max_value"], config["sum"]["retrieve_percent"])        
+        for i,row in enumerate(rows):
+            data.append([" ".join(str(x) for x in row)])
+
+    # Generate all sequences from min_value to max_value
+    elif config["data_generator"]["sequence_type"] == "series":
+        for i in tqdm(range(config["series"]["initial_max_value"], config["series"]["initial_min_value"]-1, -1)):
             initial = [i]
             mask = generate_mask(config)
-            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"], min_length_fullsequence)
-            row = [mask, initial, " ".join(str(x) for x in sequence)]
+            sequence = generate_series(initial, mask, config["series"]["max_numbers"], 0)
+            total_nums += len(sequence)
+            row = [" ".join(str(x) for x in sequence)]
             data.append(row)
-            if i == config["Initial"]["max_value"]:
-                min_length_fullsequence = max(min_length_fullsequence, len(row[2]))
-                print(f"Length of full sequence: {min_length_fullsequence}")
-            for max_len in range(3,config["sequence"]["max_length"],1):
-                sequence = generate_sequence(initial, mask,max_len, 0)
-                row = [mask, initial, " ".join(str(x) for x in sequence)]
+            for max_len in range(config["series"]["min_numbers"],config["series"]["max_numbers"],1):
+                sequence = generate_series(initial, mask,max_len, 0)
+                total_nums += len(sequence)
+                row = [" ".join(str(x) for x in sequence)]
                 data.append(row)
+        print(f"Total numbers generated: {total_nums}")
 
-
-    else :
-        for i in tqdm(range(config["sequence"]["max_rows"])):
+    elif config["data_generator"]["sequence_type"] == "series_max_rows":
+        for i in tqdm(range(config["series"]["max_rows"])):
             mask = generate_mask(config)
-            initial = generate_initial(config)
-            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"],min_length_fullsequence)
-            row = [mask, initial, " ".join(str(x) for x in sequence)]
+            initial = [random.randint(config["series"]["min_value"], config["series"]["max_value"])]
+            sequence = generate_series(initial, mask, config["series"]["max_numbers"],0)
+            row = [" ".join(str(x) for x in sequence)]
             data.append(row)
+
     return data
 
 def save_data(data, config):
@@ -101,15 +95,15 @@ def save_data(data, config):
         config (dict): Configuration parameters
     """
     # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(config["sequence"]["path"]), exist_ok=True)
+    os.makedirs(os.path.dirname(config["storage"]["path"]), exist_ok=True)
     
-    with open(config["sequence"]["path"], "w") as file:
-        print(f"Saving data to {config['sequence']['path']}")
+    with open(config["storage"]["path"], "w") as file:
+        print(f"Saving data to {config['storage']['path']}")
         for sequence in tqdm(data):
             # Convert numbers to strings and join with column delimiter
-            row = config["sequence"]["column_delimiter"].join(str(x) for x in sequence)
+            row = config["storage"]["column_delimiter"].join(str(x) for x in sequence)
             # Add row delimiter after each sequence
-            file.write(row + config["sequence"]["row_delimiter"])
+            file.write(row + config["storage"]["row_delimiter"])
         
 
 

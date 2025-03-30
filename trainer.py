@@ -16,16 +16,34 @@ def load_config(config_path: str = "config.yaml") -> dict:
 def data_preprocessing(file_path: str, processor: process, train_config_path: str = "train_config.yaml") :
     sequences = []
     train_config = load_config(train_config_path)
-    with open(file_path, 'r') as f:
-        for line in f:
-            parts = line.strip().split('|')
-            if len(parts) >= 3:
-                sequence = processor.pre_processing(parts[2].strip()+" ")
-                max_length = train_config["pre_processing"]["effective_context_length"] + 1
-                for i in range(max(0, len(sequence) - max_length)+1):
-                    seq = sequence[i:i+max_length]
-                    if len(re.findall(re.escape(train_config["pre_processing"]["token_delimiter_type"]), seq)) > 3:
+    with open(file_path, 'r') as f:        
+        for i, line in enumerate(f):
+            sequence = processor.pre_processing(" "+line.strip()+" ")
+            max_length = train_config["model"]["n_positions"] + 1
+            delim_pos = [m.start() for m in re.finditer(re.escape(train_config["pre_processing"]["replace_column_delimiter"]), sequence)]
+            if max_length >= len(sequence) and len(delim_pos) == 4:
+                sequences.append(sequence)
+            elif max_length >= len(sequence) and len(delim_pos) > 4:
+                sequences.append(sequence)
+                for r in range(len(delim_pos)):
+                    if r+4 <= len(delim_pos):
+                        seq = sequence[delim_pos[r]:delim_pos[r+4]]
                         sequences.append(seq)
+                    else :
+                        break
+            elif max_length < len(sequence) and len(delim_pos) >= 4:
+                for r in range(len(delim_pos)):
+                    if r+4 <= len(delim_pos) :
+                        if (delim_pos[r+4] - delim_pos[0]+ 1) <= max_length and r != 0 :
+                            seq = sequence[delim_pos[0]:delim_pos[r+4]]
+                            sequences.append(seq)
+                        if (delim_pos[r+4] - delim_pos[r]+ 1) <= max_length:
+                            seq = sequence[delim_pos[r]:delim_pos[r+4]]
+                            sequences.append(seq)
+                    else :
+                        break
+                sequences.append(sequence)
+
     return sequences
 
 def train(train_config_path: str = "train_config.yaml", data_config_path: str = "data_config.yaml"):

@@ -1,29 +1,41 @@
 # Configuration for generating synthetic sequence data
+storage :
+  # Output file path for generated sequences
+  path: ../simple-llm-data/sequences.txt
+  # Delimiter between columns in output file
+  column_delimiter: " "
+  # Delimiter between rows in output file
+  row_delimiter: "\n"
 
-mask:
+data_generator:
+  sequence_type : "sum" # "series" / "sum" / "series_max_rows"
+
+series:
   # Length of the binary mask sequence
-  length: 2
+  mask_length: 2
   # Minimum number of ones required in the mask
-  min_ones: 2
+  mask_min_elements: 2
+  # Minimum value for number in initial sequence
+  initial_min_value: 1
+  # Maximum value for number in initial sequence
+  initial_max_value: 500 #99999
+  # Minimum number of numbers in the sequence
+  min_numbers: 3
+  # Maximum number of numbers in the sequence
+  max_numbers: 30
+    # Number of sequences to generate
+  max_rows: "**" # Populate 100000 for 100000 sequences or ** for all sequences from min_length to max_length
 
-Initial:
-  # Minimum length of the initial sequence
-  min_length: 1
-  # Maximum length of the initial sequence  
-  max_length: 1
+
+sum:
   # Minimum value for number in initial sequence
   min_value: 1
   # Maximum value for number in initial sequence
-  max_value: 1000 #99999
-
-sequence:
+  max_value: 100 #99999
+  # Percentage of numbers to retrieve
+  retrieve_percent: 1
   # Output file path for generated sequences
-  path: ../simple-llm-data/sequences.txt
-  # Maximum length of generated sequences
-  max_length: 30
-  # Number of sequences to generate
-  max_rows: "**" # Populate 100000 for 100000 sequences or ** for all sequences from min_length to max_length
-  # Delimiter between columns in output file
-  column_delimiter: "|"
-  # Delimiter between rows in output file
-  row_delimiter: "\n"
+  path: ../simple-llm-data/sum.txt
+
+
+

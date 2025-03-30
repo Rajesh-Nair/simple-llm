@@ -7,8 +7,9 @@ paths:
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
-  token_delimiter_type : "+" # "chain_of_thought" # "+"
-  effective_context_length : 64
+  replace_column_delimiter : "+" # None
+  reverse_series : True  # False
+  column_delimiter : " " # "|"
 
 
 tokenizer:

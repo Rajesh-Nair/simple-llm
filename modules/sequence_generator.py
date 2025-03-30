@@ -1,4 +1,39 @@
-def generate_sequence(initial, mask, n, min_length=0):
+
+import random
+
+def generate_sum(min_value, max_value,retrieve_percent=1):
+    
+    """
+    Generates a sequence using a custom recurrence relation. 
+    The sequence is a list of lists, where the first element is the min_value, the second element is the max_value, and the third element is the sequence of numbers.
+    
+    Parameters:
+      min_value (int): The minimum value of the sequence.
+      max_value (int): The maximum value of the sequence.
+      retrieve_percent (float): The percentage of combinations to retrieve.
+    
+    Returns:
+      list: The generated sequence of numbers.
+    """
+    seq = []
+    # retrieve all possible combinations
+    if retrieve_percent == 1:
+      for i in range(min_value, max_value+1):
+          for j in range(min_value, max_value+1):
+              seq.append([i,j,i+j])      
+
+    # retrieve a random sample of combinations
+    else:
+      for i in random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1))):
+          for j in random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)) ):
+              seq.append([i,j,i+j]) 
+
+    # shuffle the combinations
+    random.shuffle(seq)
+
+    return seq
+
+def generate_series(initial, mask, n, min_length=0):
     """
     Generates a sequence using a custom recurrence relation.
 
@@ -20,7 +55,7 @@ def generate_sequence(initial, mask, n, min_length=0):
     seq = initial.copy()
     total_length = len(" ".join(str(x) for x in seq))
     
-    while len(seq) < n or total_length < min_length:
+    while (len(seq) < n or total_length < min_length) :
         # Get the last len(mask) elements from the sequence
         if len(seq) < len(mask):
             # Pad with zeros if sequence is shorter than mask
@@ -37,5 +72,15 @@ def generate_sequence(initial, mask, n, min_length=0):
 if __name__ == "__main__":
     # Example usage:
   # Fibonacci-like sequence: initial numbers [1, 2] and mask [1, 1]
-  my_sequence = generate_sequence([1], [1, 1], 10)
+  my_sequence = generate_series([1], [1, 1], 10)
   print(my_sequence)  # Output: [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+
+
+  my_sequence = generate_sum(0, 9, 0.5)
+  print(my_sequence)  
+
+  my_sequence = generate_sum(11, 19, 1)
+  print(my_sequence)  
+
+  for row in my_sequence:
+      print(" ".join(str(x) for x in row))
