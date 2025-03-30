@@ -77,7 +77,7 @@ def generate_data(config):
             if i == config["Initial"]["max_value"]:
                 min_length_fullsequence = max(min_length_fullsequence, len(row[2]))
                 print(f"Length of full sequence: {min_length_fullsequence}")
-            for max_len in range(3,config["sequence"]["max_length"],2):
+            for max_len in range(3,config["sequence"]["max_length"],1):
                 sequence = generate_sequence(initial, mask,max_len, 0)
                 row = [mask, initial, " ".join(str(x) for x in sequence)]
                 data.append(row)
