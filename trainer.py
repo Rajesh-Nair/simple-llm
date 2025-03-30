@@ -12,6 +12,13 @@ def load_config(config_path: str = "config.yaml") -> dict:
         config = yaml.safe_load(f)
     return config
 
+def sub_sequences(sequence: str, delimiter: str) :
+    delim_pos = [m.start() for m in re.finditer(re.escape(delimiter), sequence)]
+    seq = []
+    for i in range(delim_pos[2]+1, len(sequence)-1):
+        seq.append(sequence[:i+1])
+    return seq
+
 # function to preprocess data
 def data_preprocessing(file_path: str, processor: process, train_config_path: str = "train_config.yaml") :
     sequences = []
@@ -23,12 +30,21 @@ def data_preprocessing(file_path: str, processor: process, train_config_path: st
             delim_pos = [m.start() for m in re.finditer(re.escape(train_config["pre_processing"]["replace_column_delimiter"]), sequence)]
             if max_length >= len(sequence) and len(delim_pos) == 4:
                 sequences.append(sequence)
+                if train_config["pre_processing"]["sub_seq_add"]:   
+                    for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
+                        sequences.append(sub_seq)
             elif max_length >= len(sequence) and len(delim_pos) > 4:
                 sequences.append(sequence)
+                if train_config["pre_processing"]["sub_seq_add"]:   
+                    for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
+                        sequences.append(sub_seq)
                 for r in range(len(delim_pos)):
                     if r+4 <= len(delim_pos):
                         seq = sequence[delim_pos[r]:delim_pos[r+4]]
                         sequences.append(seq)
+                        if train_config["pre_processing"]["sub_seq_add"]:   
+                            for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
+                                sequences.append(sub_seq)
                     else :
                         break
             elif max_length < len(sequence) and len(delim_pos) >= 4:
@@ -37,9 +53,15 @@ def data_preprocessing(file_path: str, processor: process, train_config_path: st
                         if (delim_pos[r+4] - delim_pos[0]+ 1) <= max_length and r != 0 :
                             seq = sequence[delim_pos[0]:delim_pos[r+4]]
                             sequences.append(seq)
+                            if train_config["pre_processing"]["sub_seq_add"]:   
+                                for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
+                                    sequences.append(sub_seq)
                         if (delim_pos[r+4] - delim_pos[r]+ 1) <= max_length:
                             seq = sequence[delim_pos[r]:delim_pos[r+4]]
                             sequences.append(seq)
+                            if train_config["pre_processing"]["sub_seq_add"]:   
+                                for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
+                                    sequences.append(sub_seq)
                     else :
                         break
                 sequences.append(sequence)

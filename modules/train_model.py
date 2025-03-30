@@ -382,13 +382,13 @@ class TextGenerator:
             max_length = self.config['model']['n_positions']
 
         # Preprocess and encode prompt
-        processed_prompt = self.processor.pre_processing(prompt)
+        processed_prompt = self.processor.pre_processing(" "+prompt.strip()+" ")
         input_ids = self.tokenizer.encode(processed_prompt)
+        
         
         # Pad to model position length, aligning tokens to right
         pad_length = self.config['model']['n_positions'] - len(input_ids)
         padded_input = [self.tokenizer.pad_token_id] * pad_length + input_ids
-        
         # Convert to tensor and move to device
         input_tensor = torch.tensor([padded_input]).to(self.device)
         attention_mask = torch.tensor([[0] * pad_length + [1] * len(input_ids)]).to(self.device)
@@ -411,6 +411,8 @@ class TextGenerator:
                     temperature=0.01
                 )
                 
+                print("Input : ", self.tokenizer.decode(outputs[0],skip_special_tokens=True), "\nOutput : ", self.tokenizer.decode(output[0],skip_special_tokens=True ))
+                
                 # Get the new token
                 new_token = output[0, -1].item()
                 generated.append(new_token)
@@ -426,6 +428,9 @@ class TextGenerator:
                     attention_mask[:, 1:],
                     torch.ones((1,1)).to(self.device)
                 ], dim=1)
+                
+                if self.tokenizer.decode(new_token) == self.config["pre_processing"]["replace_column_delimiter"]:
+                    break
 
         # Decode only the generated tokens
         generated_text = self.tokenizer.decode(generated, skip_special_tokens=True)

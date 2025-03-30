@@ -10,7 +10,7 @@ pre_processing:
   replace_column_delimiter : "+" # None
   reverse_series : True  # False
   column_delimiter : " " # "|"
-
+  sub_seq_add : True # False
 
 tokenizer:
   vocab_size: 11  # Or desired vocabulary size
