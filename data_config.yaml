@@ -31,7 +31,7 @@ sum:
   # Minimum value for number in initial sequence
   min_value: 1
   # Maximum value for number in initial sequence
-  max_value: 1000 #99999
+  max_value: 400 #99999
   # Percentage of numbers to retrieve
   retrieve_percent: 1 # 0.5
 

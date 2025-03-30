@@ -23,7 +23,7 @@ tokenizer:
 model:
   n_positions: 64      # Maximum sequence length
   n_embd: 256          # Embedding dimension
-  n_layer: 6           # Number of transformer layers
+  n_layer: 8           # Number of transformer layers
   n_head: 4            # Number of attention heads
   activation_function: "gelu" # Activation function
   resid_pdrop: 0.1     # Dropout probability for residual layers
