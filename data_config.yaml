@@ -33,9 +33,7 @@ sum:
   # Maximum value for number in initial sequence
   max_value: 100 #99999
   # Percentage of numbers to retrieve
-  retrieve_percent: 1
-  # Output file path for generated sequences
-  path: ../simple-llm-data/sum.txt
+  retrieve_percent: 1 # 0.5
 
 
 

@@ -60,7 +60,7 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
 
     # Load dataset    
     processor = process(train_config)
-    sequences = data_preprocessing(data_config["sequence"]["path"], processor)
+    sequences = data_preprocessing(data_config["storage"]["path"], processor)
     
     # Shuffle sequences before creating dataset
     import random

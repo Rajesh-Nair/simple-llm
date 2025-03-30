@@ -18,9 +18,7 @@ def data_preprocessing(function: callable, *args, **kwargs) :
 
         with open(file_path, 'r') as f:
             for line in f:
-                parts = line.strip().split('|')
-                if len(parts) >= 3:
-                    sequences.append(process_object.pre_processing(parts[2].strip()))
+                sequences.append(process_object.pre_processing(" "+line.strip()+" "))
 
         # Write sequences to temporary file for tokenizer training
         temp_file = 'temp_sequences.txt'
@@ -64,7 +62,7 @@ if __name__ == "__main__":
         print("Loading checkpoint - skipping tokenizer training")
     else:
         build_tokenizer(
-            file_path=data_config["sequence"]["path"], # Path to the input text file
+            file_path=data_config["storage"]["path"], # Path to the input text file
             output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
             tokenizer_config=train_config["tokenizer"]
         )
