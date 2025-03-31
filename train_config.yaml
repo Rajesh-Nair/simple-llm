@@ -43,7 +43,7 @@ training:
   warmup_steps: 100 # Warmup steps
   gradient_accumulation_steps: 2  # Gradient accumulation steps
   max_grad_norm: 1.0 # Maximum gradient norm
-  weight_decay: 0.2 # Weight decay
+  weight_decay: 0.01 # Weight decay
   eval_interval: 1 # Evaluation interval and save interval
   per_device_eval_batch_size: 1024 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
