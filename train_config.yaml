@@ -36,7 +36,7 @@ model:
 training:
   load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0 # Load checkpoint path "../simple-llm-gpt2-v3.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
   per_device_batch_size: 1024 # Batch size
-  learning_rate: 0.00005 # Learning rate
+  learning_rate: 0.00010 # Learning rate
   num_epochs: 300 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
   num_workers: 2 # Number of workers - single node
