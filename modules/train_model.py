@@ -38,13 +38,13 @@ class SequenceDataset(Dataset):
         # Get input_ids and create attention mask
         input_ids = encoding['input_ids']
         attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in input_ids]
-        position_ids = attention_mask.long().cumsum(-1) - 1
-        position_ids = position_ids.masked_fill(attention_mask == 0, 0)
             
         # Split into input and target - target is shifted by 1
         x = torch.tensor(input_ids[:-1])  # Input sequence
         y = torch.tensor(input_ids[1:])   # Target sequence
         mask = torch.tensor(attention_mask[:-1])  # Attention mask for input
+        position_ids = mask.long().cumsum(-1) - 1
+        position_ids = position_ids.masked_fill(mask == 0, 0)
             
         return x, y, mask, position_ids
     
