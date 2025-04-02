@@ -38,13 +38,15 @@ class SequenceDataset(Dataset):
         # Get input_ids and create attention mask
         input_ids = encoding['input_ids']
         attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in input_ids]
+        position_ids = attention_mask.long().cumsum(-1) - 1
+        position_ids = position_ids.masked_fill(attention_mask == 0, 0)
             
         # Split into input and target - target is shifted by 1
         x = torch.tensor(input_ids[:-1])  # Input sequence
         y = torch.tensor(input_ids[1:])   # Target sequence
         mask = torch.tensor(attention_mask[:-1])  # Attention mask for input
             
-        return x, y, mask
+        return x, y, mask, position_ids
     
     def split_train_test(self, test_size: float = 0.2, random_state: int = 42) -> Tuple[Dataset, Dataset]:
         """Split the dataset into train and test sets"""
@@ -207,8 +209,8 @@ class GPT2ModelTrainer:
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             optimizer.zero_grad()  # Zero gradients at start of epoch
             
-            for step, (input_ids, labels, attention_mask) in enumerate(progress_bar):
-                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
+            for step, (input_ids, labels, attention_mask, position_ids) in enumerate(progress_bar):
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask, position_ids=position_ids)
                 loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)
@@ -353,7 +355,7 @@ class GPT2ModelTrainer:
 
         with torch.no_grad():
             progress_bar = tqdm(eval_loader, desc='Evaluating')
-            for input_ids, labels, attention_mask in progress_bar:
+            for input_ids, labels, attention_mask, position_ids in progress_bar:
                 outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss
                 total_loss += loss.item()
@@ -389,20 +391,28 @@ class TextGenerator:
         # Pad to model position length, aligning tokens to right
         pad_length = self.config['model']['n_positions'] - len(input_ids)
         padded_input = [self.tokenizer.pad_token_id] * pad_length + input_ids
+
         # Convert to tensor and move to device
         input_tensor = torch.tensor([padded_input]).to(self.device)
         attention_mask = torch.tensor([[0] * pad_length + [1] * len(input_ids)]).to(self.device)
 
+        
         with torch.no_grad():
             outputs = input_tensor
             generated = []
-            
+
             for _ in range(max_length):
+
+                # position_ids
+                position_ids = attention_mask.long().cumsum(-1) - 1
+                position_ids = position_ids.masked_fill(attention_mask == 0, 0)
+
                 # Generate next token
                 output = self.model.generate(
                     outputs,
-                    max_length=outputs.size(1) + 1,
+                    max_length=outputs.size(1)+1,
                     attention_mask=attention_mask, 
+                    position_ids=position_ids,
                     bos_token_id=None,
                     eos_token_id=None,
                     do_sample=True,
@@ -411,10 +421,20 @@ class TextGenerator:
                     temperature=0.01
                 )
                 
-                print("Input : ", self.tokenizer.decode(outputs[0],skip_special_tokens=True), "\nOutput : ", self.tokenizer.decode(output[0],skip_special_tokens=True ))
+                print("Input : ", self.tokenizer.decode(outputs[0],skip_special_tokens=True), \
+                      "\nOutput : ", self.tokenizer.decode(output[0],skip_special_tokens=True ))
+                # Get probabilities for the next token
+                logits = self.model(outputs, attention_mask=attention_mask, position_ids=position_ids).logits
+                probs = torch.softmax(logits[:, -1, :], dim=-1)
+                top_probs, top_tokens = torch.topk(probs, k=5)
+                print("Top 5 tokens and probabilities:")
+                for prob, token in zip(top_probs[0], top_tokens[0]):
+                    print(f"Token: {self.tokenizer.decode(token.item())}, Probability: {prob.item():.4f}")
                 
+
                 # Get the new token
                 new_token = output[0, -1].item()
+                print("All token :", output[0])
                 generated.append(new_token)
                 
                 # Shift everything left and add new token on right

@@ -96,8 +96,13 @@ def save_data(data, config):
     """
     # Create directory if it doesn't exist
     os.makedirs(os.path.dirname(config["storage"]["path"]), exist_ok=True)
-    
-    with open(config["storage"]["path"], "w") as file:
+    if config["storage"]["replace_or_append"] == "replace" :
+        write_mode = "w" 
+    elif config["storage"]["replace_or_append"] == "append" :
+        write_mode = "a"
+    else :
+        write_mode = "w"
+    with open(config["storage"]["path"], write_mode) as file:
         print(f"Saving data to {config['storage']['path']}")
         for sequence in tqdm(data):
             # Convert numbers to strings and join with column delimiter

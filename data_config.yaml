@@ -6,6 +6,8 @@ storage :
   column_delimiter: " "
   # Delimiter between rows in output file
   row_delimiter: "\n"
+  # Replace or append the retrieved numbers
+  replace_or_append: "replace" # "replace" or "append"
 
 data_generator:
   sequence_type : "sum" # "series" / "sum" / "series_max_rows"
@@ -34,6 +36,7 @@ sum:
   max_value: 999 #99999
   # Percentage of numbers to retrieve
   retrieve_percent: 1 # 0.5
+
 
 
 
