@@ -36,8 +36,8 @@ model:
   eos_token_id : None # End of sequence token id
 
 training:
-  load_checkpoint: null # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
-  per_device_batch_size: 1024 # Batch size
+  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0 # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
+  per_device_batch_size: 4096 # Batch size
   learning_rate: 0.00005 # Learning rate
   num_epochs: 300 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
@@ -47,7 +47,7 @@ training:
   max_grad_norm: 1.0 # Maximum gradient norm
   weight_decay: 0.01 # Weight decay
   eval_interval: 1 # Evaluation interval and save interval
-  per_device_eval_batch_size: 1024 # Evaluation batch size  
+  per_device_eval_batch_size: 4096 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
   upload_to_huggingface: True # Upload to Hugging Face Hub
   generate_text_steps : null # Generate text steps
