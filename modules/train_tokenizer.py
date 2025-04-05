@@ -29,16 +29,20 @@ def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str 
 
     # Add pad token
     tokenizer.pad_token = "<|pad|>"
+    tokenizer.eos_token = "<|pad|>"
     
     # Initialize trainer
     trainer = BpeTrainer(
         **tokenizer_config
     )
     
+
     # Train tokenizer
     tokenizer.train(files=[file_path], trainer=trainer)
 
-    fast_tokenizer = convert_tokenizer_to_hf_format(tokenizer)  
+    fast_tokenizer = convert_tokenizer_to_hf_format(tokenizer)
+    
+
     
     # Create output directory if needed
     os.makedirs(output_dir, exist_ok=True)

@@ -7,40 +7,40 @@ def load_config(path):
     with open(path, 'r') as file:
         return yaml.safe_load(file)
 
-def data_preprocessing(function: callable, *args, **kwargs) :
+# def data_preprocessing(function: callable, *args, **kwargs) :
 
-    def extract_sequences(file_path: str, *args, **kwargs) :
-        sequences = []
+#     def extract_sequences(file_path: str, *args, **kwargs) :
+#         sequences = []
 
-        config = load_config("train_config.yaml")
-        process_object = process(config)
+#         data_config = load_config("data_config.yaml")
+#         process_object = process(data_config)
 
 
-        with open(file_path, 'r') as f:
-            for line in f:
-                sequences.append(process_object.pre_processing(" "+line.strip()+" "))
+#         with open(file_path, 'r') as f:
+#             for line in f:
+#                 sequences.append(process_object.pre_processing(" "+line.strip()+" "))
 
-        # Write sequences to temporary file for tokenizer training
-        temp_file = 'temp_sequences.txt'
-        with open(temp_file, 'w') as f:
-            for seq in sequences:
-                f.write(f"{seq}\n")
+#         # Write sequences to temporary file for tokenizer training
+#         temp_file = 'temp_sequences.txt'
+#         with open(temp_file, 'w') as f:
+#             for seq in sequences:
+#                 f.write(f"{seq}\n")
         
-        print(f"Temporary file created: {temp_file}")
+#         print(f"Temporary file created: {temp_file}")
 
-        # Call the function with the temporary file 
-        output = function(file_path=temp_file, *args, **kwargs)
+#         # Call the function with the temporary file 
+#         output = function(file_path=temp_file, *args, **kwargs)
 
             
-        # Clean up temporary file
-        print(f"Removing temporary file: {temp_file}")
-        os.remove(temp_file)
+#         # Clean up temporary file
+#         print(f"Removing temporary file: {temp_file}")
+#         os.remove(temp_file)
 
-        return output
+#         return output
         
-    return extract_sequences
+#     return extract_sequences
 
-@data_preprocessing
+
 def build_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str = "../tokenizer") -> None:
     """
     Train a BPE tokenizer on input text file and save vocabulary and merge files
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         print("Loading checkpoint - skipping tokenizer training")
     else:
         build_tokenizer(
-            file_path=data_config["storage"]["path"], # Path to the input text file
+            file_path=data_config["storage"]["transformed_path"], # Path to the input text file
             output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
             tokenizer_config=train_config["tokenizer"]
         )

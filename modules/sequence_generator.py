@@ -1,6 +1,6 @@
 
 import random
-
+from tqdm import tqdm
 
 def generate_sum(min_value, max_value,retrieve_percent=1):
     
@@ -19,15 +19,15 @@ def generate_sum(min_value, max_value,retrieve_percent=1):
     seq = []
     # retrieve all possible combinations
     if retrieve_percent == 1:
-      for i in range(min_value, max_value+1):
-          for j in range(min_value, max_value+1):
+      for i in tqdm(range(min_value, max_value+1)):
+          for j in tqdm(range(min_value, max_value+1)):
               k = i+j
               seq.append([i,j,k])      
 
     # retrieve a random sample of combinations
     else:
-      for i in random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1))):
-          for j in random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)) ):
+      for i in tqdm(random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)))):
+          for j in tqdm(random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)))):
               k = i+j
               seq.append([i,j,k]) 
 

@@ -1,4 +1,6 @@
-from transformers import GPT2LMHeadModel, GPT2Config
+from transformers import GPT2Config
+from modules.custom_models import CustomGPT2LMHeadModel
+#from transformers import GPT2LMHeadModel as CustomGPT2LMHeadModel
 from modules.data_processor import process
 from modules.model_mgr import ModelManager
 from tokenizers import Tokenizer
@@ -33,7 +35,7 @@ class SequenceDataset(Dataset):
     def __getitem__(self, idx):
         sequence = self.sequences[idx]
         # PreTrainedTokenizerFast returns a dictionary with 'input_ids'
-        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length', padding_side='left')
+        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length', padding_side='right')
         
         # Get input_ids and create attention mask
         input_ids = encoding['input_ids']
@@ -43,10 +45,11 @@ class SequenceDataset(Dataset):
         x = torch.tensor(input_ids[:-1])  # Input sequence
         y = torch.tensor(input_ids[1:])   # Target sequence
         mask = torch.tensor(attention_mask[:-1])  # Attention mask for input
-        position_ids = mask.long().cumsum(-1) - 1
-        position_ids = position_ids.masked_fill(mask == 0, 0)
+
+        # Convert target y to ignore pad positions with -100
+        y[y == self.tokenizer.pad_token_id] = -100
             
-        return x, y, mask, position_ids
+        return x, y, mask
     
     def split_train_test(self, test_size: float = 0.2, random_state: int = 42) -> Tuple[Dataset, Dataset]:
         """Split the dataset into train and test sets"""
@@ -76,7 +79,7 @@ class GPT2ModelTrainer:
                 )
         
 
-    def initialize_model(self) -> GPT2LMHeadModel:
+    def initialize_model(self) -> CustomGPT2LMHeadModel:
 
         # Load from huggingface checkpoint 
         if self.config['training']['load_checkpoint'] and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
@@ -134,7 +137,7 @@ class GPT2ModelTrainer:
                 attn_pdrop=model_config['attn_pdrop'],
             )
             # Initialize model
-            model = GPT2LMHeadModel(config)
+            model = CustomGPT2LMHeadModel(config)
 
             print("Model config: ", config)
             total_params = sum(p.numel() for p in model.parameters())
@@ -148,10 +151,10 @@ class GPT2ModelTrainer:
 
     def train_model(
         self,
-        model: GPT2LMHeadModel,
+        model: CustomGPT2LMHeadModel,
         train_dataset: Dataset,
         test_dataset: Dataset
-    ) -> GPT2LMHeadModel:
+    ) -> CustomGPT2LMHeadModel:
         """Train the GPT2 model on given dataset"""
         train_config = self.config['training']
         
@@ -209,8 +212,8 @@ class GPT2ModelTrainer:
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             optimizer.zero_grad()  # Zero gradients at start of epoch
             
-            for step, (input_ids, labels, attention_mask, position_ids) in enumerate(progress_bar):
-                outputs = model(input_ids, labels=labels, attention_mask=attention_mask, position_ids=position_ids)
+            for step, (input_ids, labels, attention_mask) in enumerate(progress_bar):
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)
@@ -328,7 +331,7 @@ class GPT2ModelTrainer:
                     wandb._teardown()
             
 
-    def evaluate_model(self, model: GPT2LMHeadModel, dataset: Dataset) -> float:
+    def evaluate_model(self, model: CustomGPT2LMHeadModel, dataset: Dataset) -> float:
         """Evaluate the model on the given dataset"""
         model.eval()
         total_loss = 0
@@ -355,7 +358,7 @@ class GPT2ModelTrainer:
 
         with torch.no_grad():
             progress_bar = tqdm(eval_loader, desc='Evaluating')
-            for input_ids, labels, attention_mask, position_ids in progress_bar:
+            for input_ids, labels, attention_mask in progress_bar:
                 outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss
                 total_loss += loss.item()
@@ -403,16 +406,11 @@ class TextGenerator:
 
             for _ in range(max_length):
 
-                # position_ids
-                position_ids = attention_mask.long().cumsum(-1) - 1
-                position_ids = position_ids.masked_fill(attention_mask == 0, 0)
-
                 # Generate next token
                 output = self.model.generate(
                     outputs,
                     max_length=outputs.size(1)+1,
                     attention_mask=attention_mask, 
-                    position_ids=position_ids,
                     bos_token_id=None,
                     eos_token_id=None,
                     do_sample=True,
@@ -424,7 +422,7 @@ class TextGenerator:
                 print("Input : ", self.tokenizer.decode(outputs[0],skip_special_tokens=True), \
                       "\nOutput : ", self.tokenizer.decode(output[0],skip_special_tokens=True ))
                 # Get probabilities for the next token
-                logits = self.model(outputs, attention_mask=attention_mask, position_ids=position_ids).logits
+                logits = self.model(outputs, attention_mask=attention_mask).logits
                 probs = torch.softmax(logits[:, -1, :], dim=-1)
                 top_probs, top_tokens = torch.topk(probs, k=5)
                 print("Top 5 tokens and probabilities:")

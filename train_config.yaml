@@ -1,9 +1,9 @@
 # Sample train_config.yaml:
 
 paths:
-  model_save_path: "../simple-llm-gpt2-v3.0" # Path to save the model
-  model_load_path: "../simple-llm-gpt2-v3.0" # Path to load the model
-  tokenizer_save_path: "../simple-llm-gpt2-v3.0" # Path to save the tokenizer
+  model_save_path: "../simple-llm-gpt2-v1.0" # Path to save the model
+  model_load_path: "../simple-llm-gpt2-v1.0" # Path to load the model
+  tokenizer_save_path: "../simple-llm-gpt2-v1.0" # Path to save the tokenizer
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
@@ -11,9 +11,11 @@ pre_processing:
   reverse_series : True  # False
   column_delimiter : " " # "|"
   sub_seq_add : False # False
+  base : 2
+  max_length: 32
 
 tokenizer:
-  vocab_size: 11  # Or desired vocabulary size
+  vocab_size: 1  # Or desired vocabulary size
   special_tokens:
     - "<|UNK|>"
     - "<|pad|>"
@@ -21,9 +23,9 @@ tokenizer:
   #continuing_subword_prefix: "##"
 
 model:
-  n_positions: 64      # Maximum sequence length
-  n_embd: 256          # Embedding dimension
-  n_layer: 8           # Number of transformer layers
+  n_positions: 32      # Maximum sequence length
+  n_embd: 128          # Embedding dimension
+  n_layer: 4           # Number of transformer layers
   n_head: 4            # Number of attention heads
   activation_function: "gelu" # Activation function
   resid_pdrop: 0.1     # Dropout probability for residual layers
@@ -34,7 +36,7 @@ model:
   eos_token_id : None # End of sequence token id
 
 training:
-  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0 # Load checkpoint path "../simple-llm-gpt2-v3.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
+  load_checkpoint: null # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
   per_device_batch_size: 1024 # Batch size
   learning_rate: 0.00005 # Learning rate
   num_epochs: 300 # Number of epochs
@@ -54,7 +56,7 @@ training:
 
 wandb:
   enabled: True # Enable wandb
-  project_name: "simple-llm-gpt2-v3.0" # Wandb project name
+  project_name: "simple-add1" # Wandb project name
   entity: "mirajnair" # Wandb entity
 
 

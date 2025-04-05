@@ -25,45 +25,8 @@ def data_preprocessing(file_path: str, processor: process, train_config_path: st
     train_config = load_config(train_config_path)
     with open(file_path, 'r') as f:        
         for i, line in enumerate(f):
-            sequence = processor.pre_processing(" "+line.strip()+" ")
-            max_length = train_config["model"]["n_positions"] + 1
-            delim_pos = [m.start() for m in re.finditer(re.escape(train_config["pre_processing"]["replace_column_delimiter"]), sequence)]
-            if max_length >= len(sequence) and len(delim_pos) == 4:
-                sequences.append(sequence)
-                if train_config["pre_processing"]["sub_seq_add"]:   
-                    for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
-                        sequences.append(sub_seq)
-            elif max_length >= len(sequence) and len(delim_pos) > 4:
-                sequences.append(sequence)
-                if train_config["pre_processing"]["sub_seq_add"]:   
-                    for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
-                        sequences.append(sub_seq)
-                for r in range(len(delim_pos)):
-                    if r+4 <= len(delim_pos):
-                        seq = sequence[delim_pos[r]:delim_pos[r+4]]
-                        sequences.append(seq)
-                        if train_config["pre_processing"]["sub_seq_add"]:   
-                            for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
-                                sequences.append(sub_seq)
-                    else :
-                        break
-            elif max_length < len(sequence) and len(delim_pos) >= 4:
-                for r in range(len(delim_pos)):
-                    if r+4 <= len(delim_pos) :
-                        if (delim_pos[r+4] - delim_pos[0]+ 1) <= max_length and r != 0 :
-                            seq = sequence[delim_pos[0]:delim_pos[r+4]]
-                            sequences.append(seq)
-                            if train_config["pre_processing"]["sub_seq_add"]:   
-                                for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
-                                    sequences.append(sub_seq)
-                        if (delim_pos[r+4] - delim_pos[r]+ 1) <= max_length:
-                            seq = sequence[delim_pos[r]:delim_pos[r+4]]
-                            sequences.append(seq)
-                            if train_config["pre_processing"]["sub_seq_add"]:   
-                                for sub_seq in sub_sequences(sequence, train_config["pre_processing"]["replace_column_delimiter"]):
-                                    sequences.append(sub_seq)
-                    else :
-                        break
+            sequence = line.strip()
+            if len(sequence) <= train_config['model']['n_positions']:
                 sequences.append(sequence)
 
     return sequences
@@ -82,7 +45,8 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
 
     # Load dataset    
     processor = process(train_config)
-    sequences = data_preprocessing(data_config["storage"]["path"], processor)
+    sequences = data_preprocessing(data_config["storage"]["transformed_path"], processor)
+    print(f"Number of sequences: {len(sequences)}")
     
     # Shuffle sequences before creating dataset
     import random

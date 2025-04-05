@@ -36,9 +36,9 @@ def convert_to_base10(num_str, from_base):
         raise ValueError("Invalid base")
 
 class process():
-    def __init__(self, config, base=None):
+    def __init__(self, config):
         self.config = config
-        self.base = base
+        self.base = config["pre_processing"]["base"]
 
     # Assume the base here is to_base
     def pre_processing(self, string : str):
@@ -76,14 +76,14 @@ class process():
 
 if __name__ == "__main__":
     # Option 1: Replace the column delimiter
-    config = {"pre_processing": {"replace_column_delimiter": "+", "reverse_series": True, "column_delimiter": " "}}
-    process_object = process(config, base = 2)
+    config = {"pre_processing": {"replace_column_delimiter": "+", "reverse_series": True, "column_delimiter": " ", "base": 2}}
+    process_object = process(config)
     string = "11 21 32"
     print(process_object.pre_processing(string))
     print(process_object.post_processing(process_object.pre_processing(string)))
 
     # Option 2: No reverse the series
-    config = {"pre_processing": {"replace_column_delimiter": "+", "reverse_series": False, "column_delimiter": " "}}
-    process_object = process(config, base = 16)
+    config = {"pre_processing": {"replace_column_delimiter": "+", "reverse_series": False, "column_delimiter": " ", "base": 16}}
+    process_object = process(config)
     print(process_object.pre_processing(string))
     print(process_object.post_processing(process_object.pre_processing(string)))

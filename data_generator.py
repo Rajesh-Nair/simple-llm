@@ -1,5 +1,6 @@
 # Import required modules
 from modules.sequence_generator import *
+from modules.data_processor import process
 import yaml
 import random
 from tqdm import tqdm
@@ -56,8 +57,9 @@ def generate_data(config):
     
     # Generate all sequences from min_value to max_value
     if config["data_generator"]["sequence_type"] == "sum":
-        rows = generate_sum(config["sum"]["min_value"], config["sum"]["max_value"], config["sum"]["retrieve_percent"])        
-        for i,row in enumerate(rows):
+        rows = generate_sum(config["sum"]["min_value"], config["sum"]["max_value"], config["sum"]["retrieve_percent"])
+        print(f"Generating data for sum")       
+        for i,row in tqdm(enumerate(rows)):
             data.append([" ".join(str(x) for x in row)])
 
     # Generate all sequences from min_value to max_value
@@ -111,13 +113,32 @@ def save_data(data, config):
             file.write(row + config["storage"]["row_delimiter"])
         
 
-
+def preprocess_data(data, config):
+    """
+    Preprocess the data according to the config parameters
+    """
+    process_object = process(config)
+    count = 0
+    with open(config["storage"]["transformed_path"], 'w') as file:
+        print(f"Saving data to {config['storage']['transformed_path']}")
+        for sequence in tqdm(data):
+            # Convert numbers to strings and join with column delimiter
+            row = config["storage"]["column_delimiter"].join(str(x) for x in sequence)
+            row = config["pre_processing"]["replace_column_delimiter"] + process_object.pre_processing(row) + config["pre_processing"]["replace_column_delimiter"]
+            # Add row delimiter after each sequence
+            if len(row) <= config["pre_processing"]["max_length"]:
+                file.write(row + config["storage"]["row_delimiter"])
+                count += 1
+    print(f"Total number of sequences saved: {count}")
 
 if __name__ == "__main__":
     # Load config and generate data when run as main script
     config = load_config("data_config.yaml")
     data = generate_data(config)
     save_data(data, config)
+
+    # Process the data
+    preprocess_data(data, config)
 
 
 
