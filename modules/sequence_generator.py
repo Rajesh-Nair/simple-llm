@@ -1,6 +1,7 @@
 
 import random
 
+
 def generate_sum(min_value, max_value,retrieve_percent=1):
     
     """
@@ -20,13 +21,15 @@ def generate_sum(min_value, max_value,retrieve_percent=1):
     if retrieve_percent == 1:
       for i in range(min_value, max_value+1):
           for j in range(min_value, max_value+1):
-              seq.append([i,j,i+j])      
+              k = i+j
+              seq.append([i,j,k])      
 
     # retrieve a random sample of combinations
     else:
       for i in random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1))):
           for j in random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)) ):
-              seq.append([i,j,i+j]) 
+              k = i+j
+              seq.append([i,j,k]) 
 
     # shuffle the combinations
     random.shuffle(seq)
