@@ -36,7 +36,7 @@ model:
   eos_token_id : None # End of sequence token id
 
 training:
-  load_checkpoint: null #https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
+  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
   per_device_batch_size: 1024 # Batch size
   learning_rate: 0.0001 # Learning rate
   num_epochs: 150 # Number of epochs
