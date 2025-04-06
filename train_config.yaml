@@ -1,9 +1,9 @@
 # Sample train_config.yaml:
 
 paths:
-  model_save_path: "../simple-llm-gpt2-v1.0" # Path to save the model
-  model_load_path: "../simple-llm-gpt2-v1.0" # Path to load the model
-  tokenizer_save_path: "../simple-llm-gpt2-v1.0" # Path to save the tokenizer
+  model_save_path: "../simple-llm-gpt2-v2.0" # Path to save the model
+  model_load_path: "../simple-llm-gpt2-v2.0" # Path to load the model
+  tokenizer_save_path: "../simple-llm-gpt2-v2.0" # Path to save the tokenizer
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
@@ -24,9 +24,9 @@ tokenizer:
 
 model:
   n_positions: 32      # Maximum sequence length
-  n_embd: 128          # Embedding dimension
-  n_layer: 4           # Number of transformer layers
-  n_head: 4            # Number of attention heads
+  n_embd: 192          # Embedding dimension
+  n_layer: 6           # Number of transformer layers
+  n_head: 6            # Number of attention heads
   activation_function: "gelu" # Activation function
   resid_pdrop: 0.1     # Dropout probability for residual layers
   embd_pdrop: 0.1      # Dropout probability for embeddings
@@ -36,13 +36,13 @@ model:
   eos_token_id : None # End of sequence token id
 
 training:
-  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0 # Load checkpoint path "../simple-llm-gpt2-v1.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
+  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
   per_device_batch_size: 1024 # Batch size
-  learning_rate: 0.00005 # Learning rate
-  num_epochs: 300 # Number of epochs
+  learning_rate: 0.0001 # Learning rate
+  num_epochs: 150 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
   num_workers: 1 # Number of workers - single node
-  warmup_steps: 100 # Warmup steps
+  warmup_steps: 500 # Warmup steps
   gradient_accumulation_steps: 2  # Gradient accumulation steps
   max_grad_norm: 1.0 # Maximum gradient norm
   weight_decay: 0.01 # Weight decay
