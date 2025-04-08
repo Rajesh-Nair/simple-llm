@@ -10,7 +10,8 @@ embedding_config = {
     'fixed_pos_theta': 10000.0,
     'fixed_pos_scaling': 1.0,
     'fixed_pos_ntk_alpha': 1.0,
-    'block_digit_ids': [3,4]
+    'block_digit_ids': [3,4],
+    'padding_digit_id': 1
     }
 model = CustomGPT2LMHeadModel(config, **embedding_config)
 
@@ -41,10 +42,25 @@ weights_post = model.transformer.wpe(input_ids)
 print(weights_post)
 
 # Get block positions
-weights_post2 = model.get_block_positions(input_ids)
+weights_post2 = model._get_block_positions(input_ids)
 print(weights_post2)
 
 print(model.transformer.wpe(weights_post2))
+
+
+embedding_config["embedding_type"] = "block"
+model = CustomGPT2LMHeadModel(config, **embedding_config)   
+
+weights_post = model.transformer.wpe(input_ids)
+print(weights_post)
+
+print(model.transformer.wpe.padding_idx)
+
+
+
+
+
+
 
 
 

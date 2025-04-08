@@ -5,18 +5,24 @@ import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Config
 
 class CustomGPT2LMHeadModel(GPT2LMHeadModel):
-    def __init__(self, config: GPT2Config, embedding_type: str = None, **kwargs):
+    def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
-        self.embedding_type = embedding_type
+        self.embedding_type = kwargs.get('embedding_type', None)
+        self.padding_digit_id = kwargs.get('padding_digit_id', None)
+
+        # Set padding_idx for both token and position embeddings if padding_digit_id is provided
+        if self.padding_digit_id is not None:
+            self.transformer.wte.padding_idx = self.padding_digit_id
+            self.transformer.wpe.padding_idx = self.padding_digit_id
         
-        if embedding_type == 'fixed' or embedding_type == 'block_fixed':
+        if self.embedding_type == 'fixed' or self.embedding_type == 'block_fixed':
             # Initialize fixed positional embedding parameters
             self.fixed_pos_theta = kwargs.get('fixed_pos_theta', 10000.0)
             self.fixed_pos_scaling = kwargs.get('fixed_pos_scaling', 1.0)
             self.fixed_pos_ntk_alpha = kwargs.get('fixed_pos_ntk_alpha', 1.0)
             self.block_positions = kwargs.get('block_positions', False)
 
-            if embedding_type == 'block_fixed':
+            if self.embedding_type == 'block_fixed':
                 self.block_digit_ids = kwargs.get('block_digit_ids', [3,4])
                         
             # Create fixed positional embeddings
@@ -41,7 +47,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             self.transformer.wpe.weight.requires_grad = False
 
 
-        elif embedding_type == 'rope':
+        elif self.embedding_type == 'rope':
             # Initialize RoPE parameters
             self.rope_theta = kwargs.get('rope_theta', 10000.0)
             self.rope_scaling = kwargs.get('rope_scaling', 1.0)
@@ -52,6 +58,9 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             self.transformer.wpe.weight.requires_grad = False
             
             self.rope_cache = {}
+
+        elif self.embedding_type == 'block':
+            self.block_digit_ids = kwargs.get('block_digit_ids', [3,4])
 
         
     
@@ -194,7 +203,8 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
         
         else:
 
-            if self.embedding_type == 'block_fixed':
+            # Get block positions
+            if self.embedding_type == 'block_fixed' or self.embedding_type == 'block':
                 position_ids = self._get_block_positions(input_ids)
 
             return super().forward(
