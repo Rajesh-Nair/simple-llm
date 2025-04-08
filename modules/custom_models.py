@@ -3,12 +3,14 @@
 import torch
 import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Config
+import random
 
 class CustomGPT2LMHeadModel(GPT2LMHeadModel):
     def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
         self.embedding_type = kwargs.get('embedding_type', None)
         self.padding_digit_id = kwargs.get('padding_digit_id', None)
+        self.data_offset = kwargs.get('data_offset', 0)
 
         # Set padding_idx for both token and position embeddings if padding_digit_id is provided
         if self.padding_digit_id is not None:
@@ -64,7 +66,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
 
         
     
-    def _get_block_positions(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def _get_block_positions(self, input_ids: torch.Tensor, offset: int = 0) -> torch.Tensor:
         """Get block positions for input ids"""
         self.digits = torch.tensor(self.block_digit_ids)
 
@@ -206,6 +208,10 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             # Get block positions
             if self.embedding_type == 'block_fixed' or self.embedding_type == 'block':
                 position_ids = self._get_block_positions(input_ids)
+
+                if self.embedding_type == 'block' and self.data_offset != 0 and self.training:
+                    k = random.randint(0, self.data_offset)
+                    position_ids[position_ids>0] += k
 
             return super().forward(
                 input_ids=input_ids,

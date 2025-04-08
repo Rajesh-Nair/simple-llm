@@ -42,7 +42,8 @@ Embedding :
   fixed_pos_ntk_alpha: 1.0 # Only used for fixed embedding
   block_digit_ids: [3,4] # Only applicable for block_fixed embedding or block embedding
   padding_digit_id: 1 # Applicable for all embedding type
-  
+  data_offset: 0 # Applicable for block embedding only
+
 training:
   load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
   per_device_batch_size: 1024 # Batch size
