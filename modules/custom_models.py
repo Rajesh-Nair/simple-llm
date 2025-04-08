@@ -55,7 +55,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
 
         
     
-    def get_block_positions(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def _get_block_positions(self, input_ids: torch.Tensor) -> torch.Tensor:
         """Get block positions for input ids"""
         self.digits = torch.tensor(self.block_digit_ids)
 
@@ -195,7 +195,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
         else:
 
             if self.embedding_type == 'block_fixed':
-                position_ids = self.get_block_positions(input_ids)
+                position_ids = self._get_block_positions(input_ids)
 
             return super().forward(
                 input_ids=input_ids,
