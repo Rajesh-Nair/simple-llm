@@ -212,6 +212,16 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
                 if self.embedding_type == 'block' and self.data_offset != 0 and self.training:
                     k = random.randint(0, self.data_offset)
                     position_ids[position_ids>0] += k
+                    # Ensure position_ids don't exceed n_positions
+                    def shift_position_ids(position_ids, max_position):
+                        max_allowed = max_position - 1
+                        max_pos = position_ids.max()
+                        shift = max(0, max_pos - max_allowed)
+                        shifted = position_ids - shift
+                        # Ensure we don't go below zero
+                        shifted = torch.clamp(shifted, 0, max_allowed)
+                        return shifted
+                    position_ids = shift_position_ids(position_ids, self.config.n_positions)
 
             return super().forward(
                 input_ids=input_ids,
