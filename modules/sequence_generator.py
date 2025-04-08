@@ -2,7 +2,7 @@
 import random
 from tqdm import tqdm
 
-def generate_sum(min_value, max_value,retrieve_percent=1):
+def generate_sum(min_value, max_value,retrieve_percent=1, max_length=None):
     
     """
     Generates a sequence using a custom recurrence relation. 
@@ -21,15 +21,17 @@ def generate_sum(min_value, max_value,retrieve_percent=1):
     if retrieve_percent == 1:
       for i in tqdm(range(min_value, max_value+1)):
           for j in tqdm(range(min_value, max_value+1)):
-              k = i+j
-              seq.append([i,j,k])      
+              if max_length is None or len(str(i)) + len(str(j)) <= max_length:
+                  k = i+j
+                  seq.append([i,j,k])      
 
     # retrieve a random sample of combinations
     else:
       for i in tqdm(random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)))):
           for j in tqdm(random.sample(range(min_value, max_value+1), int(retrieve_percent*(max_value-min_value+1)))):
-              k = i+j
-              seq.append([i,j,k]) 
+              if max_length is None or len(str(i)) + len(str(j)) <= max_length:
+                  k = i+j
+                  seq.append([i,j,k]) 
 
     # shuffle the combinations
     random.shuffle(seq)

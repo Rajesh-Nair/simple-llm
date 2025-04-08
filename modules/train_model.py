@@ -121,6 +121,7 @@ class GPT2ModelTrainer:
 
             """Initialize a new GPT2 model with given vocabulary size"""
             model_config = self.config['model']
+            embedding_config = self.config['Embedding']
             config = GPT2Config(
                 vocab_size=self.vocab_size,
                 n_positions=model_config['n_positions'],
@@ -137,7 +138,7 @@ class GPT2ModelTrainer:
                 attn_pdrop=model_config['attn_pdrop'],
             )
             # Initialize model
-            model = CustomGPT2LMHeadModel(config)
+            model = CustomGPT2LMHeadModel(config, **embedding_config)
 
             print("Model config: ", config)
             total_params = sum(p.numel() for p in model.parameters())
@@ -387,7 +388,7 @@ class TextGenerator:
             max_length = self.config['model']['n_positions']
 
         # Preprocess and encode prompt
-        processed_prompt = self.processor.pre_processing(" "+prompt.strip()+" ")
+        processed_prompt = prompt #self.processor.pre_processing(" "+prompt.strip()+" ")
         input_ids = self.tokenizer.encode(processed_prompt)
         
         
@@ -452,7 +453,7 @@ class TextGenerator:
 
         # Decode only the generated tokens
         generated_text = self.tokenizer.decode(generated, skip_special_tokens=True)
-        return self.processor.post_processing(generated_text.replace(" ", ""))
+        return generated_text.replace(" ", "") #self.processor.post_processing(generated_text.replace(" ", ""))
 
 
 

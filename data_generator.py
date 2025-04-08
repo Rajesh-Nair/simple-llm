@@ -57,7 +57,7 @@ def generate_data(config):
     
     # Generate all sequences from min_value to max_value
     if config["data_generator"]["sequence_type"] == "sum":
-        rows = generate_sum(config["sum"]["min_value"], config["sum"]["max_value"], config["sum"]["retrieve_percent"])
+        rows = generate_sum(config["sum"]["min_value"], config["sum"]["max_value"], config["sum"]["retrieve_percent"], config["sum"]["max_length"])
         print(f"Generating data for sum")       
         for i,row in tqdm(enumerate(rows)):
             data.append([" ".join(str(x) for x in row)])

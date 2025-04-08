@@ -1,9 +1,9 @@
 # Sample train_config.yaml:
 
 paths:
-  model_save_path: "../simple-llm-gpt2-v2.0" # Path to save the model
-  model_load_path: "../simple-llm-gpt2-v2.0" # Path to load the model
-  tokenizer_save_path: "../simple-llm-gpt2-v2.0" # Path to save the tokenizer
+  model_save_path: "../simple-llm-gpt2-v1.0" # Path to save the model
+  model_load_path: "../simple-llm-gpt2-v1.0" # Path to load the model
+  tokenizer_save_path: "../simple-llm-gpt2-v1.0" # Path to save the tokenizer
   tokenizer_file: "tokenizer.json" # Tokenizer file name
 
 pre_processing:
@@ -35,8 +35,15 @@ model:
   bos_token_id : None # Beginning of sequence token id
   eos_token_id : None # End of sequence token id
 
+Embedding :
+  embedding_type: "fixed" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding
+  fixed_pos_theta: 10000.0
+  fixed_pos_scaling: 1.0
+  fixed_pos_ntk_alpha: 1.0
+  #block_digit_ids: [3,4] # Only applicable for block_fixed embedding
+
 training:
-  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
+  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0 # Load checkpoint path "../simple-llm-gpt2-v2.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
   per_device_batch_size: 1024 # Batch size
   learning_rate: 0.0001 # Learning rate
   num_epochs: 150 # Number of epochs

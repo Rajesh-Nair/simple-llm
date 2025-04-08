@@ -4,6 +4,8 @@ def convert_from_base10(num, to_base):
     if to_base >= 2 and to_base <= 16:
         digits = "0123456789ABCDEF"
         result = ""
+        if num == 0:
+            return "0"
         while num > 0:
             remainder = num % to_base
             result = digits[remainder] + result

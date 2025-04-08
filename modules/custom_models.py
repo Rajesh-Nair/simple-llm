@@ -3,14 +3,45 @@
 import torch
 import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Config
-import math
 
 class CustomGPT2LMHeadModel(GPT2LMHeadModel):
     def __init__(self, config: GPT2Config, embedding_type: str = None, **kwargs):
         super().__init__(config)
         self.embedding_type = embedding_type
         
-        if embedding_type == 'rope':
+        if embedding_type == 'fixed' or embedding_type == 'block_fixed':
+            # Initialize fixed positional embedding parameters
+            self.fixed_pos_theta = kwargs.get('fixed_pos_theta', 10000.0)
+            self.fixed_pos_scaling = kwargs.get('fixed_pos_scaling', 1.0)
+            self.fixed_pos_ntk_alpha = kwargs.get('fixed_pos_ntk_alpha', 1.0)
+            self.block_positions = kwargs.get('block_positions', False)
+
+            if embedding_type == 'block_fixed':
+                self.block_digit_ids = kwargs.get('block_digit_ids', [3,4])
+                        
+            # Create fixed positional embeddings
+            max_positions = config.n_positions
+            dim = config.n_embd
+            
+            # Create position indices
+            position = torch.arange(0, max_positions).unsqueeze(1)
+            # Create frequency indices
+            freq = torch.arange(0, dim // 2).unsqueeze(0)
+            
+            # Calculate angles with similar formula to RoPE, with scaling and alpha parameters
+            theta = self.fixed_pos_theta * (self.fixed_pos_scaling ** 2)
+            self.angle = position / (theta ** (2 * freq / dim) * self.fixed_pos_ntk_alpha)
+            # Calculate sin and cos values
+            pe = torch.zeros(max_positions, dim)
+            pe[:, 0::2] = torch.cos(self.angle)
+            pe[:, 1::2] = torch.sin(self.angle)
+            
+            # Replace the learned positional embeddings with fixed ones
+            self.transformer.wpe.weight.data.copy_(pe)
+            self.transformer.wpe.weight.requires_grad = False
+
+
+        elif embedding_type == 'rope':
             # Initialize RoPE parameters
             self.rope_theta = kwargs.get('rope_theta', 10000.0)
             self.rope_scaling = kwargs.get('rope_scaling', 1.0)
@@ -21,35 +52,40 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             self.transformer.wpe.weight.requires_grad = False
             
             self.rope_cache = {}
+
         
-        elif embedding_type == 'fixed':
-            # Initialize fixed positional embedding parameters
-            self.fixed_pos_theta = kwargs.get('fixed_pos_theta', 10000.0)
-            self.fixed_pos_scaling = kwargs.get('fixed_pos_scaling', 1.0)
-            self.fixed_pos_ntk_alpha = kwargs.get('fixed_pos_ntk_alpha', 1.0)
-            
-            # Create fixed positional embeddings
-            max_positions = config.n_positions
-            dim = config.n_embd
-            
-            # Create position indices
-            position = torch.arange(max_positions).unsqueeze(1)
-            # Create frequency indices
-            freq = torch.arange(dim // 2).unsqueeze(0)
-            
-            # Calculate angles with similar formula to RoPE, with scaling and alpha parameters
-            theta = self.fixed_pos_theta * (self.fixed_pos_scaling ** 2)
-            angle = position / (theta ** (2 * freq / dim) * self.fixed_pos_ntk_alpha)
-            print(angle.shape)
-            # Calculate sin and cos values
-            pe = torch.zeros(max_positions, dim)
-            pe[:, 0::2] = torch.sin(angle)
-            pe[:, 1::2] = torch.cos(angle)
-            
-            # Replace the learned positional embeddings with fixed ones
-            self.transformer.wpe.weight.data.copy_(pe)
-            self.transformer.wpe.weight.requires_grad = False
-            
+    
+    def get_block_positions(self, input_ids: torch.Tensor) -> torch.Tensor:
+        """Get block positions for input ids"""
+        self.digits = torch.tensor(self.block_digit_ids)
+
+        # mask and shape
+        mask = torch.isin(input_ids, self.digits)
+        mask_shape = mask.shape
+
+        # Create a shifted version of the mask to detect changes from 0 to 1
+        shifted_mask = torch.cat([torch.zeros((mask_shape[0], 1), dtype=mask.dtype), mask[:, :-1]], dim=1)
+        starts = (shifted_mask != mask) & mask
+
+        # Generate IDs for each segment of 1s, processing row-wise
+        segment_ids = torch.cumsum(starts, dim=1)
+        
+        # Generate an index array row-wise
+        index = torch.arange(mask.size(1)).repeat(mask.size(0), 1)
+        
+        # Reset index at the start of each segment
+        reset_index = torch.zeros_like(mask).long()
+        second_term = index * starts.long()
+        reset_index = reset_index.scatter_add(1, segment_ids, second_term)
+        
+        # Calculate positions in segment
+        positions = index - reset_index.gather(1, segment_ids) + 1
+        
+        # Ensure only values within 1-segments are non-zero
+        result = positions * mask
+
+        return result
+    
     def _get_rope_cache(self, seq_len: int, device: torch.device) -> tuple:
         """Cache RoPE embeddings for efficiency"""
         if seq_len not in self.rope_cache:
@@ -155,7 +191,12 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
                 layer.attn.k_proj = lambda x: key_rope
             
             return outputs
+        
         else:
+
+            if self.embedding_type == 'block_fixed':
+                position_ids = self.get_block_positions(input_ids)
+
             return super().forward(
                 input_ids=input_ids,
                 past_key_values=past_key_values,
@@ -182,35 +223,25 @@ if __name__ == "__main__":
         n_layer=4,
         n_head=4,
         vocab_size=50257
-    )
+    ),
+
+    embedding_config = {
+        'embedding_type': 'fixed',
+        'fixed_pos_theta': 10000.0,
+        'fixed_pos_scaling': 1.0,
+        'fixed_pos_ntk_alpha': 1.0
+    }
     
     # Create models
-    original_model = GPT2LMHeadModel(config)
-    custom_model = CustomGPT2LMHeadModel(config, embedding_type=None)
-    custom_model_rope = CustomGPT2LMHeadModel(config, embedding_type='rope')
-    custom_model_fixed_pos = CustomGPT2LMHeadModel(config, embedding_type='fixed')
-    
-    # Copy weights
-    custom_model.load_state_dict(original_model.state_dict())
+    custom_model = GPT2LMHeadModel(config) #, embedding_type='fixed')
     
     # Test input
     batch_size = 2
     seq_len = 16
     input_ids = torch.randint(0, config.vocab_size, (batch_size, seq_len))
     
-    # Test without RoPE
-    original_output = original_model(input_ids)
+    # Test fixed embedding
     custom_output = custom_model(input_ids)
     
-    print("Testing without RoPE:")
-    print(f"Output shapes match: {original_output.logits.shape == custom_output.logits.shape}")
-    
-    # Test with RoPE
-    rope_output = custom_model_rope(input_ids)
-    print("\nTesting with RoPE:")
-    print(f"Output shape: {rope_output.logits.shape}")
-    
-    # Test with fixed positional embeddings
-    fixed_pos_output = custom_model_fixed_pos(input_ids)
-    print("\nTesting with fixed positional embeddings:")
-    print(f"Output shape: {fixed_pos_output.logits.shape}")
+    print("Testing fixed embedding:")
+    print(f"Output shape : {custom_output.logits.shape}")
