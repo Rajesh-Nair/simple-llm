@@ -68,24 +68,25 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
     
     def _get_block_positions(self, input_ids: torch.Tensor, offset: int = 0) -> torch.Tensor:
         """Get block positions for input ids"""
-        self.digits = torch.tensor(self.block_digit_ids)
+        device = input_ids.device
+        self.digits = torch.tensor(self.block_digit_ids, device=device)
 
         # mask and shape
         mask = torch.isin(input_ids, self.digits)
         mask_shape = mask.shape
 
         # Create a shifted version of the mask to detect changes from 0 to 1
-        shifted_mask = torch.cat([torch.zeros((mask_shape[0], 1), dtype=mask.dtype), mask[:, :-1]], dim=1)
+        shifted_mask = torch.cat([torch.zeros((mask_shape[0], 1), dtype=mask.dtype, device=device), mask[:, :-1]], dim=1)
         starts = (shifted_mask != mask) & mask
 
         # Generate IDs for each segment of 1s, processing row-wise
         segment_ids = torch.cumsum(starts, dim=1)
         
         # Generate an index array row-wise
-        index = torch.arange(mask.size(1)).repeat(mask.size(0), 1)
+        index = torch.arange(mask.size(1), device=device).repeat(mask.size(0), 1)
         
         # Reset index at the start of each segment
-        reset_index = torch.zeros_like(mask).long()
+        reset_index = torch.zeros_like(mask, device=device).long()
         second_term = index * starts.long()
         reset_index = reset_index.scatter_add(1, segment_ids, second_term)
         
@@ -210,6 +211,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
                 position_ids = self._get_block_positions(input_ids)
 
                 if self.embedding_type == 'block' and self.data_offset != 0 and self.training:
+                    device = input_ids.device
                     k = random.randint(0, self.data_offset)
                     position_ids[position_ids>0] += k
                     # Ensure position_ids don't exceed n_positions
