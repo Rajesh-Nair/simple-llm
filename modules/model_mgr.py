@@ -1,5 +1,5 @@
 from transformers import PreTrainedTokenizerFast
-from custom_models import CustomGPT2LMHeadModel
+from modules.custom_models import CustomGPT2LMHeadModel
 from tokenizers import Tokenizer
 import torch
 from typing import List, Optional, Tuple
