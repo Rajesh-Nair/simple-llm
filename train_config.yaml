@@ -36,13 +36,13 @@ model:
   eos_token_id : None # End of sequence token id
 
 Embedding :
-  embedding_type: "block_fixed" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
+  embedding_type: "block" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
   fixed_pos_theta: 10000.0 # Only used for fixed embedding
   fixed_pos_scaling: 0.1 # Only used for fixed embedding
   fixed_pos_ntk_alpha: 1.0 # Only used for fixed embedding
   block_digit_ids: [3,4] # Only applicable for block_fixed embedding or block embedding
   padding_digit_id: 1 # Applicable for all embedding type
-  data_offset: 0 # Applicable for block embedding only
+  data_offset: 5 # Applicable for block embedding only
 
 training:
   load_checkpoint: null #https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0 # Load checkpoint path "../simple-llm-gpt2-v3.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
