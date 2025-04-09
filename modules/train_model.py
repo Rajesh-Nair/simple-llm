@@ -1,6 +1,4 @@
-from transformers import GPT2Config
-from modules.custom_models import CustomGPT2LMHeadModel
-#from transformers import GPT2LMHeadModel as CustomGPT2LMHeadModel
+from modules.custom_models import CustomGPT2LMHeadModel, CustomGPT2Config
 from modules.data_processor import process
 from modules.model_mgr import ModelManager
 from tokenizers import Tokenizer
@@ -121,8 +119,7 @@ class GPT2ModelTrainer:
 
             """Initialize a new GPT2 model with given vocabulary size"""
             model_config = self.config['model']
-            embedding_config = self.config['Embedding']
-            config = GPT2Config(
+            config = CustomGPT2Config(
                 vocab_size=self.vocab_size,
                 n_positions=model_config['n_positions'],
                 n_ctx=model_config['n_positions'],
@@ -136,9 +133,10 @@ class GPT2ModelTrainer:
                 resid_pdrop=model_config['resid_pdrop'],
                 embd_pdrop=model_config['embd_pdrop'],
                 attn_pdrop=model_config['attn_pdrop'],
+                embedding=model_config['embedding']
             )
             # Initialize model
-            model = CustomGPT2LMHeadModel(config, **embedding_config)
+            model = CustomGPT2LMHeadModel(config)
 
             print("Model config: ", config)
             total_params = sum(p.numel() for p in model.parameters())
@@ -277,29 +275,6 @@ class GPT2ModelTrainer:
                             gc.collect()
                             break
         
-            # Generate text only on main process
-            if self.accelerator.is_main_process and train_config['generate_text_steps'] and (epoch + 1) % train_config['generate_text_steps'] == 0:
-                # Clear CUDA cache before text generation
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                gc.collect()
-                
-                text_generator = TextGenerator(self.config)
-                generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
-                print(f"Generated text at epoch {epoch+1}: {generated_text}")
-                
-                # Log generated text to wandb if enabled
-                if self.config.get('wandb', {}).get('enabled', False):
-                    wandb.log({
-                        "generated_text": generated_text,
-                        "epoch": epoch
-                    })
-                
-                # Clear memory after text generation
-                del text_generator
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                gc.collect()
             
             # Wait for all processes to sync up
             self.accelerator.wait_for_everyone()
@@ -371,89 +346,7 @@ class GPT2ModelTrainer:
         avg_loss = total_loss / len(eval_loader)
         return avg_loss
  
-class TextGenerator:
-    def __init__(self, config: dict):
-        self.config = config
-        self.accelerator = Accelerator()
-        self.device = self.accelerator.device
-        self.model_manager = ModelManager(config)
-        self.model, self.tokenizer = self.model_manager.load_checkpoint_from_local()
-        self.model = self.model.to(self.device)
-        self.model.eval()
-        self.processor = process(config)
 
-    def generate_text(self, prompt: str, max_length: int = None) -> str:
-        """Generate text using the loaded model"""
-        if max_length is None:
-            max_length = self.config['model']['n_positions']
-
-        # Preprocess and encode prompt
-        processed_prompt = prompt #self.processor.pre_processing(" "+prompt.strip()+" ")
-        input_ids = self.tokenizer.encode(processed_prompt)
-        
-        
-        # Pad to model position length, aligning tokens to right
-        pad_length = self.config['model']['n_positions'] - len(input_ids)
-        padded_input = [self.tokenizer.pad_token_id] * pad_length + input_ids
-
-        # Convert to tensor and move to device
-        input_tensor = torch.tensor([padded_input]).to(self.device)
-        attention_mask = torch.tensor([[0] * pad_length + [1] * len(input_ids)]).to(self.device)
-
-        
-        with torch.no_grad():
-            outputs = input_tensor
-            generated = []
-
-            for _ in range(max_length):
-
-                # Generate next token
-                output = self.model.generate(
-                    outputs,
-                    max_length=outputs.size(1)+1,
-                    attention_mask=attention_mask, 
-                    bos_token_id=None,
-                    eos_token_id=None,
-                    do_sample=True,
-                    top_k=1,
-                    top_p=0.95,
-                    temperature=0.01
-                )
-                
-                print("Input : ", self.tokenizer.decode(outputs[0],skip_special_tokens=True), \
-                      "\nOutput : ", self.tokenizer.decode(output[0],skip_special_tokens=True ))
-                # Get probabilities for the next token
-                logits = self.model(outputs, attention_mask=attention_mask).logits
-                probs = torch.softmax(logits[:, -1, :], dim=-1)
-                top_probs, top_tokens = torch.topk(probs, k=5)
-                print("Top 5 tokens and probabilities:")
-                for prob, token in zip(top_probs[0], top_tokens[0]):
-                    print(f"Token: {self.tokenizer.decode(token.item())}, Probability: {prob.item():.4f}")
-                
-
-                # Get the new token
-                new_token = output[0, -1].item()
-                print("All token :", output[0])
-                generated.append(new_token)
-                
-                # Shift everything left and add new token on right
-                outputs = torch.cat([
-                    outputs[:, 1:],
-                    output[:, -1:] 
-                ], dim=1)
-                
-                # Update attention mask
-                attention_mask = torch.cat([
-                    attention_mask[:, 1:],
-                    torch.ones((1,1)).to(self.device)
-                ], dim=1)
-                
-                if self.tokenizer.decode(new_token) == self.config["pre_processing"]["replace_column_delimiter"]:
-                    break
-
-        # Decode only the generated tokens
-        generated_text = self.tokenizer.decode(generated, skip_special_tokens=True)
-        return generated_text.replace(" ", "") #self.processor.post_processing(generated_text.replace(" ", ""))
 
 
 

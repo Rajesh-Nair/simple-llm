@@ -34,15 +34,14 @@ model:
   layer_norm_epsilon: 0.00001 # Layer norm epsilon
   bos_token_id : None # Beginning of sequence token id
   eos_token_id : None # End of sequence token id
-
-Embedding :
-  embedding_type: "block" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
-  fixed_pos_theta: 10000.0 # Only used for fixed embedding
-  fixed_pos_scaling: 0.1 # Only used for fixed embedding
-  fixed_pos_ntk_alpha: 1.0 # Only used for fixed embedding
-  block_digit_ids: [3,4] # Only applicable for block_fixed embedding or block embedding
-  padding_digit_id: 1 # Applicable for all embedding type
-  data_offset: 5 # Applicable for block embedding only
+  embedding :
+    embedding_type: "block" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
+    fixed_pos_theta: 10000.0 # Only used for fixed embedding
+    fixed_pos_scaling: 0.1 # Only used for fixed embedding
+    fixed_pos_ntk_alpha: 1.0 # Only used for fixed embedding
+    block_digit_ids: [3,4] # Only applicable for block_fixed embedding or block embedding
+    padding_digit_id: 1 # Applicable for all embedding type
+    data_offset: 5 # Applicable for block embedding only
 
 training:
   load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v4.0 # Load checkpoint path "../simple-llm-gpt2-v4.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v4.0)
@@ -59,9 +58,6 @@ training:
   per_device_eval_batch_size: 1024 # Evaluation batch size  
   early_stopping: 5 # Early stopping patience
   upload_to_huggingface: True # Upload to Hugging Face Hub
-  generate_text_steps : null # Generate text steps
-  generate_text_length : 512 # Generate text length
-  generate_text_input : "1 1 2 3 5 8 " # Generate text input
 
 wandb:
   enabled: True # Enable wandb

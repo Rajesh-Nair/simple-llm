@@ -5,27 +5,56 @@ import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Config
 import random
 
+# Custom GPT2 Config
+class CustomGPT2Config(GPT2Config):
+    model_type = "custom-gpt2"
+
+    def __init__(
+        self,
+        embedding=None,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.embedding = embedding if embedding is not None else {
+            "embedding_type": None
+                            }
+
+# Custom GPT2 LM Head Model
 class CustomGPT2LMHeadModel(GPT2LMHeadModel):
+    config_class = CustomGPT2Config
+
     def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
-        self.embedding_type = kwargs.get('embedding_type', None)
-        self.padding_digit_id = kwargs.get('padding_digit_id', None)
-        self.data_offset = kwargs.get('data_offset', 0)
+        
+        # Get embedding parameters from config if available, otherwise from kwargs
+        embedding_config = {}
+
+        if hasattr(config, 'embedding'):
+            embedding_config = config.embedding 
+
+        self.embedding_type = embedding_config.get('embedding_type', None)
+        self.fixed_pos_theta = embedding_config.get('fixed_pos_theta', 10000.0)
+        self.fixed_pos_scaling = embedding_config.get('fixed_pos_scaling', 0.1)
+        self.fixed_pos_ntk_alpha = embedding_config.get('fixed_pos_ntk_alpha', 1.0)
+        self.block_digit_ids = embedding_config.get('block_digit_ids', None)
+        self.padding_digit_id = embedding_config.get('padding_digit_id', 1)
+        self.data_offset = embedding_config.get('data_offset', 0)
+
+            
+        self.first_call = False
 
         # Set padding_idx for both token and position embeddings if padding_digit_id is provided
-        if self.padding_digit_id is not None:
+        if self.padding_digit_id :
+            print("**Setting padding_idx for token and position embeddings to ", self.padding_digit_id)
             self.transformer.wte.padding_idx = self.padding_digit_id
             self.transformer.wpe.padding_idx = self.padding_digit_id
         
         if self.embedding_type == 'fixed' or self.embedding_type == 'block_fixed':
-            # Initialize fixed positional embedding parameters
-            self.fixed_pos_theta = kwargs.get('fixed_pos_theta', 10000.0)
-            self.fixed_pos_scaling = kwargs.get('fixed_pos_scaling', 1.0)
-            self.fixed_pos_ntk_alpha = kwargs.get('fixed_pos_ntk_alpha', 1.0)
-            self.block_positions = kwargs.get('block_positions', False)
+            print(f"Embedding type is {self.embedding_type}")
 
             if self.embedding_type == 'block_fixed':
-                self.block_digit_ids = kwargs.get('block_digit_ids', [3,4])
+                assert self.block_digit_ids is not None, "block_digit_ids must be provided for block_fixed embedding"
+            
                         
             # Create fixed positional embeddings
             max_positions = config.n_positions
@@ -50,10 +79,11 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
 
 
         elif self.embedding_type == 'rope':
+            print(f"Embedding type is {self.embedding_type}")
             # Initialize RoPE parameters
-            self.rope_theta = kwargs.get('rope_theta', 10000.0)
-            self.rope_scaling = kwargs.get('rope_scaling', 1.0)
-            self.rope_ntk_alpha = kwargs.get('rope_ntk_alpha', 1.0)
+            self.rope_theta = self.fixed_pos_theta 
+            self.rope_scaling = self.fixed_pos_scaling
+            self.rope_ntk_alpha = self.fixed_pos_ntk_alpha
             
             # Replace original positional embeddings with RoPE
             self.transformer.wpe.weight.data.zero_()
@@ -62,13 +92,15 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             self.rope_cache = {}
 
         elif self.embedding_type == 'block':
-            self.block_digit_ids = kwargs.get('block_digit_ids', [3,4])
+            assert self.block_digit_ids is not None, "block_digit_ids must be provided for block embedding"
+            print(f"Embedding type is {self.embedding_type}")
+            
 
         
     
     def _get_block_positions(self, input_ids: torch.Tensor, offset: int = 0) -> torch.Tensor:
         """Get block positions for input ids"""
-        device = input_ids.device
+        device = self.device
         self.digits = torch.tensor(self.block_digit_ids, device=device)
 
         # mask and shape
@@ -209,6 +241,10 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             # Get block positions
             if self.embedding_type == 'block_fixed' or self.embedding_type == 'block':
                 position_ids = self._get_block_positions(input_ids)
+                if not self.first_call and False:
+                    self.first_call = True
+                    print("Input IDs during first call: ", input_ids)
+                    print("Position IDs during first call: ", position_ids)
 
                 if self.embedding_type == 'block' and self.data_offset != 0 and self.training:
                     device = input_ids.device
@@ -245,23 +281,25 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
 
 if __name__ == "__main__":
     # Test the custom model
-    config = GPT2Config(
+    config = CustomGPT2Config(
         n_positions=16,
         n_embd=256,
-        n_layer=4,
+        n_layer=8,
         n_head=4,
-        vocab_size=50257
-    ),
-
-    embedding_config = {
-        'embedding_type': 'fixed',
-        'fixed_pos_theta': 10000.0,
-        'fixed_pos_scaling': 1.0,
-        'fixed_pos_ntk_alpha': 1.0
-    }
+        vocab_size=5,
+        embedding={
+            'embedding_type': 'block',
+            'fixed_pos_theta': 10000.0,
+            'fixed_pos_scaling': 0.1,
+            'fixed_pos_ntk_alpha': 1.0,
+            'block_digit_ids': [3, 4],
+            'padding_digit_id': 1,
+            'data_offset': 5
+        }
+    )
     
     # Create models
-    custom_model = GPT2LMHeadModel(config) #, embedding_type='fixed')
+    custom_model = CustomGPT2LMHeadModel(config)
     
     # Test input
     batch_size = 2

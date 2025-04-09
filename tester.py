@@ -1,60 +1,82 @@
-from transformers import GPT2Config 
-from modules.custom_models import CustomGPT2LMHeadModel 
+#from transformers import GPT2Config 
+from modules.custom_models import CustomGPT2LMHeadModel, CustomGPT2Config
+from modules.model_mgr import ModelManager
 import torch
-import numpy as np
+import yaml
+
+# load config
+def load_config(file_path: str = "config.yaml"):
+    with open(file_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
+
+# train config
+train_config = load_config(file_path="train_config.yaml")
 
 # config
-config = GPT2Config(n_positions=16, n_embd=256, n_layer=4, n_head=4, vocab_size=50257)
-embedding_config = {
-    'embedding_type': 'block_fixed',
-    'fixed_pos_theta': 10000.0,
-    'fixed_pos_scaling': 1.0,
-    'fixed_pos_ntk_alpha': 1.0,
-    'block_digit_ids': [3,4],
-    'padding_digit_id': 1
-    }
-model = CustomGPT2LMHeadModel(config, **embedding_config)
+# Model initialization
+print("Model initialization------------------------")
+config = CustomGPT2Config(**train_config['model'], vocab_size=5)
+model = CustomGPT2LMHeadModel(config)
 
 # test input
+print("Test input------------------------")
 input_ids = torch.randint(0, config.vocab_size, (1, 16))
 output = model(input_ids)
-print(output.logits.shape)
-
-# Positional Embedding
-print(model.transformer.wpe.weight.shape)
+print("Output shape : ", output.logits.shape)
 
 # Positional Embedding weights requires_grad
-print(model.transformer.wpe.weight.requires_grad)
+print("Positional Embedding weights requires_grad------------------------")
+if train_config['model']['embedding']['embedding_type'] == 'fixed' or train_config['model']['embedding']['embedding_type'] == 'fixed_block':
+    assert model.transformer.wpe.weight.requires_grad == False
+else:
+    assert model.transformer.wpe.weight.requires_grad == True
+print("Check done------------------------")
 
-# Positional Embedding weights
-weights = model.transformer.wpe.weight
+# Padding digit id
+print("Padding digit id------------------------")
+if train_config['model']['embedding']['padding_digit_id'] :
+    assert model.transformer.wpe.padding_idx == train_config['model']['embedding']['padding_digit_id']
+print("Check done------------------------")
 
-# Print weights shape
-print(weights.shape)
+# Save model
+print("Save model------------------------")
+print("Embedding Config : ", model.config.embedding)
+model_mgr = ModelManager(train_config)
+model_mgr.save_model_to_local(model)
+print("Save done------------------------")
 
-# Print weights
-print(weights)
-
-# Get block positions
-input_ids = torch.tensor([[0, 3, 4, 0, 3, 4, 3, 0, 4, 4, 0,3,3,3,3,3]])
-
-weights_post = model.transformer.wpe(input_ids)
-print(weights_post)
-
-# Get block positions
-weights_post2 = model._get_block_positions(input_ids)
-print(weights_post2)
-
-print(model.transformer.wpe(weights_post2))
+# Load model
+print("Load model------------------------")
+model = model_mgr.load_model_from_local()
+print("Load done------------------------")
 
 
-embedding_config["embedding_type"] = "block"
-model = CustomGPT2LMHeadModel(config, **embedding_config)   
+# test input
+print("Test input------------------------")
+input_ids = torch.randint(0, config.vocab_size, (1, 16))
+output = model(input_ids)
+print("Output shape : ", output.logits.shape)
 
-weights_post = model.transformer.wpe(input_ids)
-print(weights_post)
+# Positional Embedding weights requires_grad
+print("Positional Embedding weights requires_grad------------------------")
+if train_config['model']['embedding']['embedding_type'] == 'fixed' or train_config['model']['embedding']['embedding_type'] == 'fixed_block':
+    assert model.transformer.wpe.weight.requires_grad == False
+else:
+    assert model.transformer.wpe.weight.requires_grad == True
+print("Check done------------------------")
 
-print(model.transformer.wpe.padding_idx)
+# Padding digit id
+print("Padding digit id------------------------")
+if train_config['model']['embedding']['padding_digit_id'] :
+    assert model.transformer.wpe.padding_idx == train_config['model']['embedding']['padding_digit_id']
+print("Check done------------------------")
+
+
+
+
+
+
 
 
 
