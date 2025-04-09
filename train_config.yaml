@@ -36,7 +36,7 @@ model:
   eos_token_id : None # End of sequence token id
 
 Embedding :
-  embedding_type: "block" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
+  embedding_type: "block_fixed" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
   fixed_pos_theta: 10000.0 # Only used for fixed embedding
   fixed_pos_scaling: 0.1 # Only used for fixed embedding
   fixed_pos_ntk_alpha: 1.0 # Only used for fixed embedding
