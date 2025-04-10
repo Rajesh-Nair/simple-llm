@@ -1,5 +1,5 @@
 from tokenizers import Tokenizer
-from modules.train_model import ModelManager, GPT2ModelTrainer, SequenceDataset, TextGenerator
+from modules.train_model import ModelManager, GPT2ModelTrainer, SequenceDataset
 from modules.data_processor import process
 import yaml
 import re
