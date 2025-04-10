@@ -41,7 +41,7 @@ model:
     fixed_pos_ntk_alpha: 1.0 # Only used for fixed embedding
     block_digit_ids: [3,4] # Only applicable for block_fixed embedding or block embedding
     padding_digit_id: 1 # Applicable for all embedding type
-    data_offset: 10 # Applicable for block embedding only
+    data_offset: 5 # Applicable for block embedding only
 
 training:
   load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v4.0 # Load checkpoint path "../simple-llm-gpt2-v4.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v4.0)
@@ -49,7 +49,7 @@ training:
   learning_rate: 0.00015 # Learning rate
   num_epochs: 50 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
-  num_workers: 1 # Number of workers - single node
+  num_workers: 2 # Number of workers - single node
   warmup_steps: 500 # Warmup steps
   gradient_accumulation_steps: 2  # Gradient accumulation steps
   max_grad_norm: 1.0 # Maximum gradient norm
