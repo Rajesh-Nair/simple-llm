@@ -80,14 +80,15 @@ class TextGenerator:
                 generated.append(new_token)
                 
                 # Shift everything left and add new token on right
+                start_pos = max(0, len(outputs[0]) + 1 - self.config['model']['n_positions'])
                 outputs = torch.cat([
-                    outputs[:, 1:],
+                    outputs[:, start_pos:],
                     output[:, -1:] 
                 ], dim=1)
                 
                 # Update attention mask
                 attention_mask = torch.cat([
-                    attention_mask[:, 1:],
+                    attention_mask[:, start_pos:],
                     torch.ones((1,1)).to(self.device)
                 ], dim=1)
                 
