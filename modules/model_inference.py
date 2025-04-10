@@ -39,7 +39,7 @@ class TextGenerator:
         # Convert to tensor and move to device
         input_tensor = torch.tensor([input_ids]).to(self.device)
         attention_mask = torch.tensor([[1] * len(input_ids)]).to(self.device)
-        position_ids = self.model._get_block_positions(input_ids)
+        position_ids = self.model._get_block_positions(input_tensor)
 
         
         with torch.no_grad():
@@ -91,7 +91,12 @@ class TextGenerator:
                     torch.ones((1,1)).to(self.device)
                 ], dim=1)
                 
-                if self.tokenizer.decode(new_token) == self.config["pre_processing"]["replace_column_delimiter"]:
+                if self.tokenizer.decode(new_token) == self.config["pre_processing"]["replace_column_delimiter"] :
+                    print("Column delimiter detected, stopping generation")
+                    break
+            
+                if new_token == self.tokenizer.pad_token_id :
+                    print("Pad token id detected, stopping generation")
                     break
 
         # Decode only the generated tokens

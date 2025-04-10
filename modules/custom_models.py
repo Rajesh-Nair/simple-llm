@@ -241,7 +241,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
             # Get block positions
             if self.embedding_type == 'block_fixed' or self.embedding_type == 'block':
                 position_ids = self._get_block_positions(input_ids)
-                if not self.first_call and False:
+                if not self.first_call :
                     self.first_call = True
                     print("Input IDs during first call: ", input_ids)
                     print("Position IDs during first call: ", position_ids)
