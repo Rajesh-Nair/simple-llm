@@ -13,7 +13,7 @@ from transformers import get_cosine_schedule_with_warmup
 import wandb
 import gc  # Add garbage collector import
 from modules.utils import load_config
-from modules.data_processor import SequenceDataset
+from modules.train_tokenizer import SequenceDataset
 
 
 

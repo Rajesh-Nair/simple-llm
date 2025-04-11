@@ -87,7 +87,6 @@ class SequenceDataset(Dataset):
 
         # Assuming no merge of input bits during tokenization
         if input_length and self.split_input_length:
-            print("input_length : ", input_length)
             input_length = int(input_length)
             y[:input_length-1] = -100
             
