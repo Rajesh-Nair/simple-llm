@@ -37,7 +37,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
         self.fixed_pos_scaling = embedding_config.get('fixed_pos_scaling', 0.1)
         self.fixed_pos_ntk_alpha = embedding_config.get('fixed_pos_ntk_alpha', 1.0)
         self.block_digit_ids = embedding_config.get('block_digit_ids', None)
-        self.padding_digit_id = embedding_config.get('padding_digit_id', 1)
+        self.padding_digit_id = embedding_config.get('padding_digit_id', None)
         self.data_offset = embedding_config.get('data_offset', 0)
 
             
@@ -129,60 +129,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
         result = positions * mask
 
         return result
-    
-    def _get_rope_cache(self, seq_len: int, device: torch.device) -> tuple:
-        """Cache RoPE embeddings for efficiency"""
-        if seq_len not in self.rope_cache:
-            # Calculate RoPE embeddings
-            dim = self.config.n_embd // self.config.n_head
-            theta = self.rope_theta * (self.rope_scaling ** 2)
-            
-            # Create position indices
-            pos = torch.arange(seq_len, device=device).unsqueeze(1)
-            # Create frequency indices
-            freq = torch.arange(dim // 2, device=device).unsqueeze(0)
-            
-            # Calculate RoPE angles with NTK scaling
-            angle = pos / (theta ** (2 * freq / dim) * self.rope_ntk_alpha)
-            
-            # Calculate sin and cos values
-            sin = torch.sin(angle)
-            cos = torch.cos(angle)
 
-            # Double the dimension by repeating each value
-            sin = sin.repeat_interleave(2, dim=-1)
-            cos = cos.repeat_interleave(2, dim=-1)
-            
-            # Cache the results
-            self.rope_cache[seq_len] = (sin, cos)
-            
-        return self.rope_cache[seq_len]
-    
-    def _apply_rope(self, x: torch.Tensor, position_ids: torch.Tensor) -> torch.Tensor:
-        """Apply RoPE to input tensor"""
-        batch_size, seq_len, _ = x.shape
-        device = x.device
-        
-        # Get cached RoPE values
-        sin, cos = self._get_rope_cache(seq_len, device)
-        
-        # Reshape for RoPE application
-        x_reshaped = x.view(batch_size, seq_len, self.config.n_head, -1)
-        
-        # Split into real and imaginary parts
-        x_cos = x_reshaped
-        x_sin = torch.roll(x_reshaped.clone(), shifts=1, dims=-1)
-        x_sin[..., 0::2] = torch.roll(x_reshaped.clone(), shifts=-1, dims=-1)[..., 0::2]*-1  # Negate every other element in the last dimension
-        
-        
-        # Reshape sin and cos for broadcasting
-        sin = sin.unsqueeze(0).unsqueeze(2)  # Add batch and head dimensions
-        cos = cos.unsqueeze(0).unsqueeze(2)  # Add batch and head dimensions
-        
-        # Apply RoPE rotation
-        x_rope = x_cos * cos + x_sin * sin
-        
-        return x_rope.view(batch_size, seq_len, -1)
     
     def forward(
         self,
@@ -201,82 +148,42 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
         output_hidden_states=None,
         return_dict=None,
     ) -> torch.Tensor:
-        if self.embedding_type == 'rope':
-            # Get the embeddings and attention outputs from parent model
-            outputs = super().forward(
-                input_ids=input_ids,
-                past_key_values=past_key_values,
-                attention_mask=attention_mask,
-                token_type_ids=token_type_ids,
-                position_ids=position_ids,
-                head_mask=head_mask,
-                inputs_embeds=inputs_embeds,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=encoder_attention_mask,
-                labels=labels,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            
-            # Extract and modify attention layers to apply RoPE to Q and K vectors
-            for layer in self.transformer.h:
-                # Get query and key from attention layer
-                query = layer.attn.q_proj(outputs.hidden_states)
-                key = layer.attn.k_proj(outputs.hidden_states)
-                
-                # Apply RoPE to query and key
-                query_rope = self._apply_rope(query, position_ids)
-                key_rope = self._apply_rope(key, position_ids)
-                
-                # Replace the original query and key with RoPE versions
-                layer.attn.q_proj = lambda x: query_rope
-                layer.attn.k_proj = lambda x: key_rope
-            
-            return outputs
-        
-        else:
 
-            # Get block positions
-            if self.embedding_type == 'block_fixed' or self.embedding_type == 'block':
-                position_ids = self._get_block_positions(input_ids)
-                if not self.first_call :
-                    self.first_call = True
-                    print("Input IDs during first call: ", input_ids)
-                    print("Position IDs during first call: ", position_ids)
+        # Get block positions
+        if self.embedding_type == 'block_fixed' or self.embedding_type == 'block':
+            position_ids = self._get_block_positions(input_ids)
 
-                if self.embedding_type == 'block' and self.data_offset != 0 and self.training:
-                    device = input_ids.device
-                    k = random.randint(0, self.data_offset)
-                    position_ids[position_ids>0] += k
-                    # Ensure position_ids don't exceed n_positions
-                    def shift_position_ids(position_ids, max_position):
-                        max_allowed = max_position - 1
-                        max_pos = position_ids.max()
-                        shift = max(0, max_pos - max_allowed)
-                        shifted = position_ids - shift
-                        # Ensure we don't go below zero
-                        shifted = torch.clamp(shifted, 0, max_allowed)
-                        return shifted
-                    position_ids = shift_position_ids(position_ids, self.config.n_positions)
+            if self.embedding_type == 'block' and self.data_offset != 0 and self.training:
+                device = input_ids.device
+                k = random.randint(0, self.data_offset)
+                position_ids[position_ids>0] += k
+                # Ensure position_ids don't exceed n_positions
+                def shift_position_ids(position_ids, max_position):
+                    max_allowed = max_position - 1
+                    max_pos = position_ids.max()
+                    shift = max(0, max_pos - max_allowed)
+                    shifted = position_ids - shift
+                    # Ensure we don't go below zero
+                    shifted = torch.clamp(shifted, 0, max_allowed)
+                    return shifted
+                position_ids = shift_position_ids(position_ids, self.config.n_positions)
 
-            return super().forward(
-                input_ids=input_ids,
-                past_key_values=past_key_values,
-                attention_mask=attention_mask,
-                token_type_ids=token_type_ids,
-                position_ids=position_ids,
-                head_mask=head_mask,
-                inputs_embeds=inputs_embeds,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=encoder_attention_mask,
-                labels=labels,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
+        return super().forward(
+            input_ids=input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            labels=labels,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
 
 if __name__ == "__main__":

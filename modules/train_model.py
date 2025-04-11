@@ -12,48 +12,10 @@ from accelerate import Accelerator
 from transformers import get_cosine_schedule_with_warmup
 import wandb
 import gc  # Add garbage collector import
-
-def load_config(config_path: str = "config.yaml") -> dict:
-    """Load configuration from yaml file"""
-    print(f"Loading config from {config_path}")
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
+from modules.utils import load_config
+from modules.data_processor import SequenceDataset
 
 
-class SequenceDataset(Dataset):
-    def __init__(self, sequences: List[str], tokenizer: Tokenizer, max_length: int = 128):
-        self.sequences = sequences
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-
-    def __len__(self):
-        return len(self.sequences)
-
-    def __getitem__(self, idx):
-        sequence = self.sequences[idx]
-        # PreTrainedTokenizerFast returns a dictionary with 'input_ids'
-        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length', padding_side='right')
-        
-        # Get input_ids and create attention mask
-        input_ids = encoding['input_ids']
-        attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in input_ids]
-            
-        # Split into input and target - target is shifted by 1
-        x = torch.tensor(input_ids[:-1])  # Input sequence
-        y = torch.tensor(input_ids[1:])   # Target sequence
-        mask = torch.tensor(attention_mask[:-1])  # Attention mask for input
-
-        # Convert target y to ignore pad positions with -100
-        y[y == self.tokenizer.pad_token_id] = -100
-            
-        return x, y, mask
-    
-    def split_train_test(self, test_size: float = 0.2, random_state: int = 42) -> Tuple[Dataset, Dataset]:
-        """Split the dataset into train and test sets"""
-        train_size = 1 - test_size
-        train_dataset, test_dataset = torch.utils.data.random_split(self, [train_size, test_size], generator=torch.Generator().manual_seed(random_state))
-        return train_dataset, test_dataset
 
 class GPT2ModelTrainer:
     def __init__(self, config: dict):

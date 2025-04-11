@@ -1,5 +1,3 @@
-import re
-
 def convert_from_base10(num, to_base):
     if to_base >= 2 and to_base <= 16:
         digits = "0123456789ABCDEF"
@@ -74,6 +72,9 @@ class process():
             string = str(self.config["pre_processing"]["column_delimiter"]).join(str(convert_to_base10(row, from_base=self.base)) for row in string.split(self.config["pre_processing"]["column_delimiter"]))
 
         return string
+    
+
+
 
 
 if __name__ == "__main__":

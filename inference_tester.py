@@ -1,5 +1,5 @@
 from modules.model_mgr import ModelManager
-from modules.train_model import load_config
+from modules.utils import load_config
 from modules.model_inference import TextGenerator
 
 # Load config

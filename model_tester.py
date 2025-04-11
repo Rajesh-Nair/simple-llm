@@ -2,13 +2,9 @@
 from modules.custom_models import CustomGPT2LMHeadModel, CustomGPT2Config
 from modules.model_mgr import ModelManager
 import torch
-import yaml
+from modules.utils import load_config
 
 # load config
-def load_config(file_path: str = "config.yaml"):
-    with open(file_path, 'r') as file:
-        config = yaml.safe_load(file)
-    return config
 
 # train config
 train_config = load_config(file_path="train_config.yaml")

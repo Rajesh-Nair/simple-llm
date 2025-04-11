@@ -1,25 +1,12 @@
 # Import required modules
 from modules.sequence_generator import *
 from modules.data_processor import process
-import yaml
 import random
 from tqdm import tqdm
 import os
+from modules.utils import load_config
+import re
 
-
-def load_config(path):
-    """
-    Load configuration from a YAML file
-    
-    Args:
-        path (str): Path to the YAML config file
-        
-    Returns:
-        dict: Configuration parameters loaded from the file
-    """
-    with open(path, 'r') as file:
-        config = yaml.safe_load(file)
-    return config
 
 def generate_mask(config):
     """
@@ -113,9 +100,9 @@ def save_data(data, config):
             file.write(row + config["storage"]["row_delimiter"])
         
 
-def preprocess_data(data, config):
+def format_data(data, config):
     """
-    Preprocess the data according to the config parameters
+    Fromat the data according to the config parameters
     """
     process_object = process(config)
     count = 0
@@ -123,11 +110,21 @@ def preprocess_data(data, config):
         print(f"Saving data to {config['storage']['transformed_path']}")
         for sequence in tqdm(data):
             # Convert numbers to strings and join with column delimiter
-            row = config["storage"]["column_delimiter"].join(str(x) for x in sequence)
-            row = config["pre_processing"]["replace_column_delimiter"] + process_object.pre_processing(row) + config["pre_processing"]["replace_column_delimiter"]
+            row = process_object.pre_processing(config["storage"]["column_delimiter"].join(str(x) for x in sequence)) 
+            row = config["pre_processing"]["replace_column_delimiter"] + row + config["pre_processing"]["replace_column_delimiter"]
+            if config["data_generator"]["sequence_type"] == "sum":
+                try:
+                    matches = re.finditer(r'\{}'.format(config["pre_processing"]["replace_column_delimiter"]), row)
+                    positions = [match.start() for match in matches]
+                    input_length = positions[2] + 1
+                except:
+                    input_length = None
+            else:
+                    input_length = None
+            
             # Add row delimiter after each sequence
             if len(row) <= config["pre_processing"]["max_length"]:
-                file.write(row + config["storage"]["row_delimiter"])
+                file.write(str(input_length) + ":" + row + config["storage"]["row_delimiter"])
                 count += 1
     print(f"Total number of sequences saved: {count}")
 
@@ -137,8 +134,8 @@ if __name__ == "__main__":
     data = generate_data(config)
     save_data(data, config)
 
-    # Process the data
-    preprocess_data(data, config)
+    # Format the data
+    format_data(data, config)
 
 
 
