@@ -45,7 +45,7 @@ sum:
   # Maximum value for number in initial sequence
   max_value: 9999 #99999
   # Percentage of numbers to retrieve
-  retrieve_percent: 0.1 # 0.5
+  retrieve_percent: 0.2 # 0.5
   # max length x  & y
   max_length: null
 
