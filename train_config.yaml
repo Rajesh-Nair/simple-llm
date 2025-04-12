@@ -49,7 +49,7 @@ training:
   learning_rate: 0.00015 # Learning rate
   num_epochs: 50 # Number of epochs
   device: "cuda" # Use "cuda" for GPU, "cpu" for CPU
-  num_workers: 1 # Number of workers - single node
+  num_workers: 2 # Number of workers - single node
   warmup_steps: 500 # Warmup steps
   gradient_accumulation_steps: 2  # Gradient accumulation steps
   max_grad_norm: 1.0 # Maximum gradient norm
