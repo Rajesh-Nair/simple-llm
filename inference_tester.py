@@ -19,6 +19,7 @@ model_manager.save_fast_tokenizer_to_local(tokenizer)
 # Initialize text generator for inference
 text_generator = TextGenerator(config)
 
-prompt = "+0001+0001+"
+prompt = "+11+01+1"
+
 text = text_generator.generate_text(prompt, max_length=20)
 print("Generated text : ", text)
