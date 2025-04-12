@@ -1,4 +1,4 @@
-from transformers import GPT2LMHeadModel, GPT2Config
+from modules.custom_models import CustomGPT2LMHeadModel, CustomGPT2Config
 from modules.data_processor import process
 from modules.model_mgr import ModelManager
 from tokenizers import Tokenizer
@@ -9,45 +9,13 @@ import yaml
 import os
 from tqdm import tqdm
 from accelerate import Accelerator
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_cosine_schedule_with_warmup
 import wandb
-
-def load_config(config_path: str = "config.yaml") -> dict:
-    """Load configuration from yaml file"""
-    print(f"Loading config from {config_path}")
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
+import gc  # Add garbage collector import
+from modules.utils import load_config
+from modules.train_tokenizer import SequenceDataset
 
 
-class SequenceDataset(Dataset):
-    def __init__(self, sequences: List[str], tokenizer: Tokenizer, max_length: int = 128):
-        self.sequences = sequences
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-
-    def __len__(self):
-        return len(self.sequences)
-
-    def __getitem__(self, idx):
-        sequence = self.sequences[idx]
-        # PreTrainedTokenizerFast returns a dictionary with 'input_ids'
-        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length')
-        
-        # Get input_ids from the encoding dictionary
-        input_ids = encoding['input_ids']
-            
-        # Split into input and target - target is shifted by 1
-        x = torch.tensor(input_ids[:-1])  # Input sequence
-        y = torch.tensor(input_ids[1:])   # Target sequence
-            
-        return x, y
-    
-    def split_train_test(self, test_size: float = 0.2, random_state: int = 42) -> Tuple[Dataset, Dataset]:
-        """Split the dataset into train and test sets"""
-        train_size = 1 - test_size
-        train_dataset, test_dataset = torch.utils.data.random_split(self, [train_size, test_size], generator=torch.Generator().manual_seed(random_state))
-        return train_dataset, test_dataset
 
 class GPT2ModelTrainer:
     def __init__(self, config: dict):
@@ -71,7 +39,7 @@ class GPT2ModelTrainer:
                 )
         
 
-    def initialize_model(self) -> GPT2LMHeadModel:
+    def initialize_model(self) -> CustomGPT2LMHeadModel:
 
         # Load from huggingface checkpoint 
         if self.config['training']['load_checkpoint'] and self.config['training']['load_checkpoint'].startswith("https://huggingface.co"):
@@ -113,7 +81,7 @@ class GPT2ModelTrainer:
 
             """Initialize a new GPT2 model with given vocabulary size"""
             model_config = self.config['model']
-            config = GPT2Config(
+            config = CustomGPT2Config(
                 vocab_size=self.vocab_size,
                 n_positions=model_config['n_positions'],
                 n_ctx=model_config['n_positions'],
@@ -127,9 +95,10 @@ class GPT2ModelTrainer:
                 resid_pdrop=model_config['resid_pdrop'],
                 embd_pdrop=model_config['embd_pdrop'],
                 attn_pdrop=model_config['attn_pdrop'],
+                embedding=model_config['embedding']
             )
             # Initialize model
-            model = GPT2LMHeadModel(config)
+            model = CustomGPT2LMHeadModel(config)
 
             print("Model config: ", config)
             total_params = sum(p.numel() for p in model.parameters())
@@ -143,10 +112,10 @@ class GPT2ModelTrainer:
 
     def train_model(
         self,
-        model: GPT2LMHeadModel,
+        model: CustomGPT2LMHeadModel,
         train_dataset: Dataset,
         test_dataset: Dataset
-    ) -> GPT2LMHeadModel:
+    ) -> CustomGPT2LMHeadModel:
         """Train the GPT2 model on given dataset"""
         train_config = self.config['training']
         
@@ -175,13 +144,11 @@ class GPT2ModelTrainer:
         # Calculate total training steps
         total_steps = len(train_loader) * train_config['num_epochs']
         
-        # Create learning rate scheduler with warmup
-        # total_steps = num_epochs * steps_per_epoch, where steps_per_epoch = len(train_loader)
-        # This means each step is one batch of training data
-        scheduler = get_linear_schedule_with_warmup(
+        # Create cosine learning rate scheduler with warmup
+        scheduler = get_cosine_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=train_config['warmup_steps'], 
-            num_training_steps=total_steps  # total_steps = num_epochs * len(train_loader)
+            num_warmup_steps=train_config['warmup_steps'],
+            num_training_steps=total_steps
         )
 
         # Prepare for distributed training
@@ -206,8 +173,8 @@ class GPT2ModelTrainer:
             progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{train_config["num_epochs"]}')
             optimizer.zero_grad()  # Zero gradients at start of epoch
             
-            for step, (input_ids, labels) in enumerate(progress_bar):
-                outputs = model(input_ids, labels=labels)
+            for step, (input_ids, labels, attention_mask) in enumerate(progress_bar):
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)
@@ -264,31 +231,45 @@ class GPT2ModelTrainer:
                         early_stopping_counter += 1
                         if early_stopping_counter >= train_config['early_stopping']:
                             print(f"Early stopping at epoch {epoch+1}")
+                            # Clear CUDA cache and run garbage collection
+                            if torch.cuda.is_available():
+                                torch.cuda.empty_cache()
+                            gc.collect()
                             break
         
-            # Generate text only on main process
-            if self.accelerator.is_main_process and train_config['generate_text_steps'] and (epoch + 1) % train_config['generate_text_steps'] == 0:
-                text_generator = TextGenerator(self.config)
-                generated_text = text_generator.generate_text(train_config['generate_text_input'], max_length=train_config['generate_text_length'])
-                print(f"Generated text at epoch {epoch+1}: {generated_text}")
-                
-                # Log generated text to wandb if enabled
-                if self.config.get('wandb', {}).get('enabled', False):
-                    wandb.log({
-                        "generated_text": generated_text,
-                        "epoch": epoch
-                    })
             
             # Wait for all processes to sync up
             self.accelerator.wait_for_everyone()
         
         # Finish wandb run if enabled
         if self.config.get('wandb', {}).get('enabled', False) and self.accelerator.is_main_process:
-            wandb.finish()
+            try:
+                # Wait for all processes to sync before finishing wandb
+                self.accelerator.wait_for_everyone()
+                wandb.finish(quiet=True)  # Add quiet=True to avoid hanging
+                wandb.finish(exit_code=0) # Force finish with exit code
+            except Exception as e:
+                print(f"Error finishing wandb: {e}")
+            finally:
+                # Ensure cleanup happens even if wandb finish fails
+                # Clear any remaining CUDA cache and memory
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize() # Make sure GPU operations are finished
+                gc.collect()
+                
+                # Force close any remaining wandb processes
+                try:
+                    wandb.finish(exit_code=0, quiet=True)
+                except:
+                    pass
+                
+                # Kill any zombie processes
+                if hasattr(wandb, '_teardown'):
+                    wandb._teardown()
             
-        return self.accelerator.unwrap_model(model)    
 
-    def evaluate_model(self, model: GPT2LMHeadModel, dataset: Dataset) -> float:
+    def evaluate_model(self, model: CustomGPT2LMHeadModel, dataset: Dataset) -> float:
         """Evaluate the model on the given dataset"""
         model.eval()
         total_loss = 0
@@ -315,8 +296,8 @@ class GPT2ModelTrainer:
 
         with torch.no_grad():
             progress_bar = tqdm(eval_loader, desc='Evaluating')
-            for input_ids, labels in progress_bar:
-                outputs = model(input_ids, labels=labels)
+            for input_ids, labels, attention_mask in progress_bar:
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss
                 total_loss += loss.item()
                 total_samples += input_ids.size(0)
@@ -327,66 +308,7 @@ class GPT2ModelTrainer:
         avg_loss = total_loss / len(eval_loader)
         return avg_loss
  
-class TextGenerator:
-    def __init__(self, config: dict):
-        self.config = config
-        self.accelerator = Accelerator()
-        self.device = self.accelerator.device
-        self.model_manager = ModelManager(config)
-        self.model, self.tokenizer = self.model_manager.load_checkpoint_from_local()
-        self.model = self.model.to(self.device)
-        self.model.eval()
-        self.processor = process(config)
 
-    def generate_text(self, prompt: str, max_length: int = None) -> str:
-        """Generate text using the loaded model"""
-        if max_length is None:
-            max_length = self.config['model']['n_positions']
-
-        # PreTrainedTokenizerFast returns input_ids directly
-        input_ids = torch.tensor([self.tokenizer.encode(self.processor.pre_processing(prompt))]).to(self.device)
-        attention_mask = torch.ones_like(input_ids)
-
-        with torch.no_grad():
-            if max_length > self.config['model']['n_positions']:
-                outputs = input_ids  # Start with the prompt
-                i = 0
-                while outputs.size(1) < max_length and i < 150: #Max 150 tokens
-                    # Get the last n_positions-1 tokens as context
-                    context = outputs[:, -(self.config['model']['n_positions']-1):]
-                    # Update attention mask for the context
-                    context_mask = torch.ones_like(context)
-                    
-                    # Generate next token
-                    output = self.model.generate(
-                        context,
-                        max_length=context.size(1) + 1,  # Only generate one new token
-                        attention_mask=context_mask,
-                        bos_token_id=None,
-                        eos_token_id=None,
-                        do_sample=True,
-                        top_k=1,
-                        top_p=0.95,
-                        temperature=0.01
-                    )
-                    
-                    # Append only the newly generated token
-                    new_token = output[:, -1:]
-                    outputs = torch.cat([outputs, new_token], dim=1)
-                    i += 1
-            else :
-                outputs = self.model.generate(
-                    input_ids,
-                    max_length=max_length,
-                    attention_mask=attention_mask,
-                    bos_token_id=None,  # Set to None since config has 'None' as string
-                    eos_token_id=None,  # Set to None since config has 'None' as string 
-                    do_sample=True,
-                    top_k=1,
-                    top_p=0.95,
-                    temperature=0.01
-                )
-        return self.processor.post_processing(self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=True).replace(" ", ""))
 
 
 
@@ -414,9 +336,4 @@ if __name__ == "__main__":
     dataset = SequenceDataset(sequences, tokenizer, max_length=config['model']['n_positions'])
 
     # Train model
-    model = trainer.train_model(model, dataset, dataset)
-    
-    # Save checkpoint only on main process
-    if accelerator.is_main_process:
-        model_manager.save_model_to_local(model)
-
+    trainer.train_model(model, dataset, dataset)

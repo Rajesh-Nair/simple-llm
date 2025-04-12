@@ -1,26 +1,20 @@
 from modules.train_tokenizer import train_bpe_tokenizer
 from modules.data_processor import process
 import os
-import yaml
-
-def load_config(path):
-    with open(path, 'r') as file:
-        return yaml.safe_load(file)
+from modules.utils import load_config
 
 def data_preprocessing(function: callable, *args, **kwargs) :
 
     def extract_sequences(file_path: str, *args, **kwargs) :
         sequences = []
 
-        config = load_config("train_config.yaml")
-        process_object = process(config)
+        data_config = load_config("data_config.yaml")
+        process_object = process(data_config)
 
 
         with open(file_path, 'r') as f:
             for line in f:
-                parts = line.strip().split('|')
-                if len(parts) >= 3:
-                    sequences.append(process_object.pre_processing(parts[2].strip()))
+                sequences.append(line.strip().split(":")[1])
 
         # Write sequences to temporary file for tokenizer training
         temp_file = 'temp_sequences.txt'
@@ -64,7 +58,7 @@ if __name__ == "__main__":
         print("Loading checkpoint - skipping tokenizer training")
     else:
         build_tokenizer(
-            file_path=data_config["sequence"]["path"], # Path to the input text file
+            file_path=data_config["storage"]["transformed_path"], # Path to the input text file
             output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
             tokenizer_config=train_config["tokenizer"]
         )

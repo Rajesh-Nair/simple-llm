@@ -1,29 +1,55 @@
 # Configuration for generating synthetic sequence data
-
-mask:
-  # Length of the binary mask sequence
-  length: 2
-  # Minimum number of ones required in the mask
-  min_ones: 2
-
-Initial:
-  # Minimum length of the initial sequence
-  min_length: 1
-  # Maximum length of the initial sequence  
-  max_length: 1
-  # Minimum value for number in initial sequence
-  min_value: 1
-  # Maximum value for number in initial sequence
-  max_value: 99999
-
-sequence:
+storage :
   # Output file path for generated sequences
   path: ../simple-llm-data/sequences.txt
-  # Maximum length of generated sequences
-  max_length: 50
-  # Number of sequences to generate
-  max_rows: "**" # Populate 100000 for 100000 sequences or ** for all sequences from min_length to max_length
+  # transformed data
+  transformed_path: ../simple-llm-data/transformed_sequences.txt
   # Delimiter between columns in output file
-  column_delimiter: "|"
+  column_delimiter: " "
   # Delimiter between rows in output file
   row_delimiter: "\n"
+  # Replace or append the retrieved numbers
+  replace_or_append: "replace" # "replace" or "append"
+
+data_generator:
+  sequence_type : "sum" # "series" / "sum" / "series_max_rows"
+
+pre_processing:
+  replace_column_delimiter : "+" # None
+  reverse_series : True  # False
+  column_delimiter : " " # "|"
+  sub_seq_add : False # False
+  base : 2
+  max_length: 64
+
+series:
+  # Length of the binary mask sequence
+  mask_length: 2
+  # Minimum number of ones required in the mask
+  mask_min_elements: 2
+  # Minimum value for number in initial sequence
+  initial_min_value: 1
+  # Maximum value for number in initial sequence
+  initial_max_value: 500 #99999
+  # Minimum number of numbers in the sequence
+  min_numbers: 3
+  # Maximum number of numbers in the sequence
+  max_numbers: 30
+    # Number of sequences to generate
+  max_rows: "**" # Populate 100000 for 100000 sequences or ** for all sequences from min_length to max_length
+
+
+sum:
+  # Minimum value for number in initial sequence
+  min_value: 0
+  # Maximum value for number in initial sequence
+  max_value: 1499 #99999
+  # Percentage of numbers to retrieve
+  retrieve_percent: 1 # 0.5
+  # max length x  & y
+  max_length: null
+
+
+
+
+

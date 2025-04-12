@@ -1,10 +1,17 @@
-from transformers import GPT2LMHeadModel, PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast
+from modules.custom_models import CustomGPT2LMHeadModel, CustomGPT2Config
 from tokenizers import Tokenizer
 import torch
 from typing import List, Optional, Tuple
 import yaml
 import os
 from huggingface_hub import login, Repository
+from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING
+
+# Register your custom config and model
+CONFIG_MAPPING.register("custom-gpt2", CustomGPT2Config)
+MODEL_FOR_CAUSAL_LM_MAPPING.register(CustomGPT2Config, CustomGPT2LMHeadModel)
 
 class ModelManager:
     def __init__(self, config: dict):
@@ -27,12 +34,12 @@ class ModelManager:
         return tokenizer
 
 
-    def load_model_from_local(self) -> GPT2LMHeadModel:
+    def load_model_from_local(self) -> CustomGPT2LMHeadModel:
         """Load the model from a file"""
-        return GPT2LMHeadModel.from_pretrained(self.config['paths']['model_load_path'])
+        return CustomGPT2LMHeadModel.from_pretrained(self.config['paths']['model_load_path'])
     
     
-    def load_checkpoint_from_local(self) -> Tuple[GPT2LMHeadModel, PreTrainedTokenizerFast]:
+    def load_checkpoint_from_local(self) -> Tuple[CustomGPT2LMHeadModel, PreTrainedTokenizerFast]:
         """Load the model and tokenizer"""
         model = self.load_model_from_local()
         tokenizer = self.load_fast_tokenizer_from_local()
@@ -54,7 +61,7 @@ class ModelManager:
         
 
 
-    def save_model_to_local(self, model: GPT2LMHeadModel):
+    def save_model_to_local(self, model: CustomGPT2LMHeadModel):
         """Save the model to a file"""
         model.save_pretrained(self.config['paths']['model_save_path'])
 
@@ -71,9 +78,9 @@ class ModelManager:
         return hf_config
     
 
-    def download_model_from_hub(self) -> GPT2LMHeadModel:
+    def download_model_from_hub(self) -> CustomGPT2LMHeadModel:
         # Load model and tokenizer from Hugging Face Hub
-        model = GPT2LMHeadModel.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
+        model = CustomGPT2LMHeadModel.from_pretrained(self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""))
         
         return model
     
@@ -124,7 +131,7 @@ class ModelManager:
 
     # Hugging Face Hub uploaders
     
-    def upload_model_to_hub(self, model: GPT2LMHeadModel):
+    def upload_model_to_hub(self, model: CustomGPT2LMHeadModel):
         """Upload model to Hugging Face Hub"""
         try:
             # Login to Hugging Face Hub
@@ -188,3 +195,5 @@ class ModelManager:
         except Exception as e:
             print(f"Error uploading tokenizer to Hugging Face Hub: {str(e)}")
             raise 
+
+

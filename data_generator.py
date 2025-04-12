@@ -1,24 +1,12 @@
 # Import required modules
-from modules.sequence_generator import generate_sequence
-import yaml
+from modules.sequence_generator import *
+from modules.data_processor import process
 import random
 from tqdm import tqdm
 import os
+from modules.utils import load_config
+import re
 
-
-def load_config(path):
-    """
-    Load configuration from a YAML file
-    
-    Args:
-        path (str): Path to the YAML config file
-        
-    Returns:
-        dict: Configuration parameters loaded from the file
-    """
-    with open(path, 'r') as file:
-        config = yaml.safe_load(file)
-    return config
 
 def generate_mask(config):
     """
@@ -30,28 +18,15 @@ def generate_mask(config):
     Returns:
         list: Binary mask of specified length with minimum number of ones
     """
-    if config["mask"]["length"] == config["Initial"]["max_length"]:
-        mask = [1] * config["mask"]["length"]
+    if config["series"]["mask_length"] <= config["series"]["mask_min_elements"]:
+        mask = [1] * config["series"]["mask_length"]
     else:
-        mask = [random.randint(0, 1) for _ in range(config["mask"]["length"])]
+        mask = [random.randint(0, 1) for _ in range(config["series"]["mask_length"])]
         # Recursively regenerate if mask doesn't have minimum required ones
-        if sum(mask) < config["mask"]["min_ones"]:
+        if sum(mask) < config["series"]["mask_min_elements"]:   
             mask = generate_mask(config)
     return mask
 
-def generate_initial(config):
-    """
-    Generate initial sequence values according to config parameters
-    
-    Args:
-        config (dict): Configuration containing initial sequence parameters
-        
-    Returns:
-        list: Initial sequence values within specified range
-    """
-    initial_length = random.randint(config["Initial"]["min_length"], config["Initial"]["max_length"])
-    initial = [random.randint(config["Initial"]["min_value"], config["Initial"]["max_value"]) for _ in range(initial_length)]
-    return initial
 
 def generate_data(config):
     """
@@ -64,23 +39,40 @@ def generate_data(config):
         list: Generated sequence according to specified parameters
     """
     data = []
-    print(f"Generating {config['sequence']['max_rows']} sequences")
+    print(f"Generating {config['series']['max_rows']} sequences")
+    total_nums = 0
+    
     # Generate all sequences from min_value to max_value
-    if config["sequence"]["max_rows"] == "**":
-        for i in range(config["Initial"]["min_value"], config["Initial"]["max_value"]+1):
+    if config["data_generator"]["sequence_type"] == "sum":
+        rows = generate_sum(config["sum"]["min_value"], config["sum"]["max_value"], config["sum"]["retrieve_percent"], config["sum"]["max_length"])
+        print(f"Generating data for sum")       
+        for i,row in tqdm(enumerate(rows)):
+            data.append([" ".join(str(x) for x in row)])
+
+    # Generate all sequences from min_value to max_value
+    elif config["data_generator"]["sequence_type"] == "series":
+        for i in tqdm(range(config["series"]["initial_max_value"], config["series"]["initial_min_value"]-1, -1)):
             initial = [i]
             mask = generate_mask(config)
-            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
-            row = [mask, initial, " ".join(str(x) for x in sequence)]
+            sequence = generate_series(initial, mask, config["series"]["max_numbers"], 0)
+            total_nums += len(sequence)
+            row = [" ".join(str(x) for x in sequence)]
+            data.append(row)
+            for max_len in range(config["series"]["min_numbers"],config["series"]["max_numbers"],1):
+                sequence = generate_series(initial, mask,max_len, 0)
+                total_nums += len(sequence)
+                row = [" ".join(str(x) for x in sequence)]
+                data.append(row)
+        print(f"Total numbers generated: {total_nums}")
+
+    elif config["data_generator"]["sequence_type"] == "series_max_rows":
+        for i in tqdm(range(config["series"]["max_rows"])):
+            mask = generate_mask(config)
+            initial = [random.randint(config["series"]["min_value"], config["series"]["max_value"])]
+            sequence = generate_series(initial, mask, config["series"]["max_numbers"],0)
+            row = [" ".join(str(x) for x in sequence)]
             data.append(row)
 
-    else :
-        for i in tqdm(range(config["sequence"]["max_rows"])):
-            mask = generate_mask(config)
-            initial = generate_initial(config)
-            sequence = generate_sequence(initial, mask, config["sequence"]["max_length"])
-            row = [mask, initial, " ".join(str(x) for x in sequence)]
-            data.append(row)
     return data
 
 def save_data(data, config):
@@ -92,24 +84,58 @@ def save_data(data, config):
         config (dict): Configuration parameters
     """
     # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(config["sequence"]["path"]), exist_ok=True)
-    
-    with open(config["sequence"]["path"], "w") as file:
-        print(f"Saving data to {config['sequence']['path']}")
+    os.makedirs(os.path.dirname(config["storage"]["path"]), exist_ok=True)
+    if config["storage"]["replace_or_append"] == "replace" :
+        write_mode = "w" 
+    elif config["storage"]["replace_or_append"] == "append" :
+        write_mode = "a"
+    else :
+        write_mode = "w"
+    with open(config["storage"]["path"], write_mode) as file:
+        print(f"Saving data to {config['storage']['path']}")
         for sequence in tqdm(data):
             # Convert numbers to strings and join with column delimiter
-            row = config["sequence"]["column_delimiter"].join(str(x) for x in sequence)
+            row = config["storage"]["column_delimiter"].join(str(x) for x in sequence)
             # Add row delimiter after each sequence
-            file.write(row + config["sequence"]["row_delimiter"])
+            file.write(row + config["storage"]["row_delimiter"])
         
 
-
+def format_data(data, config):
+    """
+    Fromat the data according to the config parameters
+    """
+    process_object = process(config)
+    count = 0
+    with open(config["storage"]["transformed_path"], 'w') as file:
+        print(f"Saving data to {config['storage']['transformed_path']}")
+        for sequence in tqdm(data):
+            # Convert numbers to strings and join with column delimiter
+            row = process_object.pre_processing(config["storage"]["column_delimiter"].join(str(x) for x in sequence)) 
+            row = config["pre_processing"]["replace_column_delimiter"] + row + config["pre_processing"]["replace_column_delimiter"]
+            if config["data_generator"]["sequence_type"] == "sum":
+                try:
+                    matches = re.finditer(r'\{}'.format(config["pre_processing"]["replace_column_delimiter"]), row)
+                    positions = [match.start() for match in matches]
+                    input_length = positions[2] + 1
+                except:
+                    input_length = None
+            else:
+                    input_length = None
+            
+            # Add row delimiter after each sequence
+            if len(row) <= config["pre_processing"]["max_length"]:
+                file.write(str(input_length) + ":" + row + config["storage"]["row_delimiter"])
+                count += 1
+    print(f"Total number of sequences saved: {count}")
 
 if __name__ == "__main__":
     # Load config and generate data when run as main script
     config = load_config("data_config.yaml")
     data = generate_data(config)
     save_data(data, config)
+
+    # Format the data
+    format_data(data, config)
 
 
 
