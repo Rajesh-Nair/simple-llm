@@ -11,20 +11,20 @@ config = load_config("train_config.yaml")
 
 # Initialize model manager and load model/tokenizer
 model_manager = ModelManager(config)
-#model = model_manager.load_model_from_local()
-##tokenizer = model_manager.load_fast_tokenizer_from_local()
-model = model_manager.download_model_from_hub()
-tokenizer = model_manager.download_fast_tokenizer_from_hub()
-print("loaded model and tokenizer")
-model_manager.save_model_to_local(model)
-model_manager.save_fast_tokenizer_to_local(tokenizer)
+model = model_manager.load_model_from_local()
+tokenizer = model_manager.load_fast_tokenizer_from_local()
+# model = model_manager.download_model_from_hub()
+# tokenizer = model_manager.download_fast_tokenizer_from_hub()
+# print("loaded model and tokenizer")
+# model_manager.save_model_to_local(model)
+# model_manager.save_fast_tokenizer_to_local(tokenizer)
 
 
 # test input
 print("Test input------------------------")
 
-input = ["11:+0001+0001+000"]
-dataset = SequenceDataset(input, tokenizer,max_length=64,split_input_length=True)
+input = ["5:+F+F+"]
+dataset = SequenceDataset(input, tokenizer,max_length=8,split_input_length=True)
 
 for i in range(len(dataset)):
     print("--------------------------------")
@@ -52,12 +52,13 @@ output = model(
 
 print("Output shape : ", output.logits.shape)
 #print("Output : ", torch.softmax(output.logits[:, -1, :], dim=-1))
-probs = torch.softmax(output.logits[:, -1, :], dim=-1)
+probs = torch.softmax(output.logits[:, 2:13, :], dim=-1)
 top_probs, top_tokens = torch.topk(probs, k=5)
 print(top_probs.shape, top_tokens.shape)
 print("Top 5 tokens and probabilities:")
 for prob, token in zip(top_probs[0], top_tokens[0]):
     print("--------------------------------")
-    print(f"Token: {tokenizer.decode(token.item())}, Probability: {prob.item():.4f}")
+    for i in range(len(token)):
+        print(f"Token: {tokenizer.decode(token[i].item())}, Probability: {prob[i].item():.6f}")
 
 print("Loss : ", output.loss)

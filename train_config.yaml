@@ -44,7 +44,7 @@ model:
     data_offset: 2 # Applicable for block embedding only
 
 training:
-  load_checkpoint: null #https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0 # Load checkpoint path "../simple-llm-gpt2-v3.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
+  load_checkpoint: https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0 # Load checkpoint path "../simple-llm-gpt2-v3.0" or null or huggingface model repo path (https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
   per_device_batch_size: 1024 # Batch size
   learning_rate: 0.00015 # Learning rate
   num_epochs: 50 # Number of epochs

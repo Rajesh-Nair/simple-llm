@@ -62,7 +62,8 @@ class TextGenerator:
                 # Get probabilities for the next token
                 logits = self.model(outputs, attention_mask=attention_mask, position_ids=position_ids).logits
                 print("Logits : ", logits.shape)
-                probs = torch.softmax(logits[:, -1, :], dim=-1)
+                look_at = -1
+                probs = torch.softmax(logits[:, look_at, :], dim=-1)
                 top_probs, top_tokens = torch.topk(probs, k=5)
                 print("Top 5 tokens and probabilities:")
                 for prob, token in zip(top_probs[0], top_tokens[0]):
@@ -70,7 +71,7 @@ class TextGenerator:
                 
 
                 # Get the new token
-                new_token = output[0, -1].item()
+                new_token = output[0, look_at].item()
                 print("All token :", output[0])
                 generated.append(new_token)
                 
@@ -78,7 +79,7 @@ class TextGenerator:
                 start_pos = max(0, len(outputs[0]) + 1 - self.config['model']['n_positions'])
                 outputs = torch.cat([
                     outputs[:, start_pos:],
-                    output[:, -1:] 
+                    output[:, look_at:] 
                 ], dim=1)
                 
                 # Update attention mask
