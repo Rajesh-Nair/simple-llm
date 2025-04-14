@@ -23,8 +23,8 @@ tokenizer = model_manager.load_fast_tokenizer_from_local()
 # test input
 print("Test input------------------------")
 
-input = ["5:+F+F+"]
-dataset = SequenceDataset(input, tokenizer,max_length=8,split_input_length=True)
+input = ["11:+1234+2345+"]
+dataset = SequenceDataset(input, tokenizer,max_length=16,split_input_length=True)
 
 for i in range(len(dataset)):
     print("--------------------------------")
@@ -52,7 +52,7 @@ output = model(
 
 print("Output shape : ", output.logits.shape)
 #print("Output : ", torch.softmax(output.logits[:, -1, :], dim=-1))
-probs = torch.softmax(output.logits[:, 2:13, :], dim=-1)
+probs = torch.softmax(output.logits[:, 8:16, :], dim=-1)
 top_probs, top_tokens = torch.topk(probs, k=5)
 print(top_probs.shape, top_tokens.shape)
 print("Top 5 tokens and probabilities:")

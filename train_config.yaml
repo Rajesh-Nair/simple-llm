@@ -11,7 +11,7 @@ pre_processing:
   reverse_series : True  # False
   column_delimiter : " " # "|"
   sub_seq_add : False # False
-  base : 2
+  base : 16
   max_length: 64
 
 tokenizer:
