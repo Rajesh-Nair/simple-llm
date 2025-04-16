@@ -1,4 +1,5 @@
 from modules.utils import load_config
+from modules.model_mgr import ModelManager
 from modules.model_inference import TextGenerator
 from modules.data_processor import process
 import random
@@ -9,14 +10,14 @@ train_config = load_config("train_config.yaml")
 data_config = load_config("data_config.yaml")
 
 # Initialize model manager and load model/tokenizer
-#model_manager = ModelManager(train_config)
+model_manager = ModelManager(train_config)
 #model = model_manager.load_model_from_local()#
 #tokenizer = model_manager.load_fast_tokenizer_from_local()
-#model = model_manager.download_model_from_hub()
-#tokenizer = model_manager.download_fast_tokenizer_from_hub()
-#print("saved model and tokenizer")
-#model_manager.save_model_to_local(model)
-#model_manager.save_fast_tokenizer_to_local(tokenizer)
+model = model_manager.download_model_from_hub()
+tokenizer = model_manager.download_fast_tokenizer_from_hub()
+print("saved model and tokenizer")
+model_manager.save_model_to_local(model)
+model_manager.save_fast_tokenizer_to_local(tokenizer)
 
 
 text_generator = TextGenerator(train_config)
