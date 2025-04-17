@@ -162,6 +162,7 @@ class GPT2ModelTrainer:
             self.model_manager.upload_tokenizer_to_hub()
         try:
             pre_eval_loss = self.evaluate_model(model, test_dataset)
+            print(f"Initial Evaluation Loss: {pre_eval_loss:.6f}")
         except Exception as e:
             print(f"Error evaluating model: {str(e)}")
             pre_eval_loss = float('inf')
@@ -204,13 +205,13 @@ class GPT2ModelTrainer:
             avg_loss = total_loss / len(train_loader)
             
             if self.accelerator.is_main_process:
-                print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Average Loss: {avg_loss:.4f}")
+                print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Training Loss: {avg_loss:.6f}")
 
             # Evaluate model
             if (epoch + 1) % train_config['eval_interval'] == 0:
                 eval_loss = self.evaluate_model(model, test_dataset)
                 if self.accelerator.is_main_process:
-                    print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Evaluation Loss: {eval_loss:.4f}")
+                    print(f"Epoch {epoch+1}/{train_config['num_epochs']}, Evaluation Loss: {eval_loss:.6f}")
                     
                     # Log evaluation metrics to wandb if enabled
                     if self.config.get('wandb', {}).get('enabled', False):

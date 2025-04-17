@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Download from Git
-git clone -b simple-add4 https://github.com/Rajesh-Nair/simple-llm.git
+git clone -b simple-add3 https://github.com/Rajesh-Nair/simple-llm.git
 
 # Go to the project
 cd simple-llm

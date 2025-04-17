@@ -2,78 +2,130 @@
 
 This repository demonstrates how to train a Language Learning Model (LLM) from scratch using the GPT-2 architecture. The model is trained on numerical sequences to learn and predict patterns.
 
-## Overview
-The project implements a complete ML pipeline including:
-- Synthetic dataset generation for number sequences
-- Custom tokenizer training 
-- Model training using GPT-2 architecture
-- Inference capabilities
+## 📌 Overview
 
-## Dataset Generator
-The data generator creates synthetic number sequences based on patterns defined in `data_config.yaml`. Key configuration parameters include:
+This project implements a full machine learning pipeline:
 
-1. Mask settings:
-   - Binary mask sequence length: 4
-   - Minimum required ones: 2
+- 📊 **Synthetic dataset generation** (number sequences)
+- 🔤 **Custom tokenizer training**
+- 🧠 **Model training** using GPT-2
+- 🤖 **Inference capabilities**
 
-2. Initial sequence parameters:
-   - Length range: 1-1
-   - Value range: 0-20
+---
 
-3. Output sequence settings:
-   - Maximum length: 100
-   - Number of sequences: 100,000
-   - Output path: ../simple-llm-data/sequences.txt
-   - Delimiters: | (columns), \n (rows)
+## 🚧 Progress So Far
 
-To generate the dataset:
-1. Configure the data generation parameters in `data_config.yaml`
-2. Run `python3 data_generator.py`
+✅ We have trained a **6.4 million parameter** model that:
+- Uses **base-16 (hexadecimal)** conversion for tokenization.
+- Can **add up to 4-digit numbers with 100% accuracy**.
+- Is publicly available on Hugging Face:  
+  🔗 [mirajnair/simple-llm-gpt2-v3.0](https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
 
-## Training
-The model training process consists of:
+---
 
-1. Training the tokenizer:
+## 🏗️ Dataset Generator
+
+Synthetic number sequences are generated based on parameters defined in `data_config.yaml`.
+
+**Example Configuration:**
+- **Number range:** `0 - 9999`
+- **Number of sequences:** `100,000`
+- **Output path:** `../simple-llm-data/sequences.txt`
+- **Delimiters:** `|` (columns), `\n` (rows)
+
+### 🔧 To Generate the Dataset:
+1. Update `data_config.yaml` with your desired parameters.
+2. Run the generator:
    ```bash
-   python3 tokenizer.py
+   python3 data_generator.py
    ```
 
-2. Training the model:
-   ```bash
-   python3 trainer.py
-   ```
+---
 
-Key training configuration parameters in `train_config.yaml`:
-- Model architecture (layers, heads, embeddings)
-- Training hyperparameters (batch size, learning rate, etc.)
-- Checkpoint handling and model saving
-- Hugging Face Hub integration
+## 🎯 Training
 
-## Usage
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Step 1: Train the Tokenizer
+```bash
+python3 tokenizer.py
+```
 
-2. Run the full pipeline:
-   ```bash
-   ./run_script.sh
-   ```
+### Step 2: Train the Model
+```bash
+python3 trainer.py
+```
 
-3. For inference, use the trained model to generate sequences:
-   ```python
-   from modules.train_model import GPT2ModelTrainer
-   trainer = GPT2ModelTrainer(config)
-   generated = trainer.generate("1 2 3", max_length=100)
-   ```
+Training configurations are managed in `train_config.yaml`, including:
 
-## Model Architecture
-The implementation uses a GPT-2 style architecture with:
-- Multiple transformer layers
-- Multi-head self-attention
-- Position embeddings
-- Layer normalization
-- Dropout regularization
+- 🔧 Model architecture (layers, heads, embedding size)
+- ⚙️ Training hyperparameters (batch size, learning rate)
+- 💾 Checkpointing and saving
+- ☁️ Hugging Face Hub integration
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+---
+
+## 🔢 Position Embeddings
+
+### 📐 Learnable vs. Sinusoidal Embeddings
+
+- **Learnable Embeddings**: Adapt to numeric patterns.
+- **Sinusoidal Embeddings**: Provide a mathematical basis for position understanding.
+
+---
+
+### 🧮 Block Position IDs (Abacus Embedding)
+
+Inspired by the [Abacus Embedding paper](https://arxiv.org/pdf/2405.17399), we use **block position IDs**.
+
+**Example:**
+
+- Input: `+1342+879+2221+`
+- Block IDs: `01234012301234`
+
+#### 🔍 Why Block Position IDs?
+
+1. ✅ **Commutative Support**: `a + b = b + a` — block IDs reinforce this.
+2. 🧠 **Digit Alignment**: Helps align units, tens, hundreds positions for easier digit-wise processing.
+
+---
+
+### 🔄 Digit Reversal
+
+As part of preprocessing:
+- `5672 → 2765` (reversed)
+- Output is reversed back during evaluation.
+
+#### 📈 Benefits of Reversal
+
+1. 🧒 **Human-like learning**: Mimics the left-to-right addition humans use.
+2. 🎯 **Causal attention compatibility**: Enables better carryover handling.
+
+---
+
+## 🧩 Tokenization Strategy
+
+Tokenization is **critical** for arithmetic modeling. Our approach:
+
+1. 📏 **Shortens sequences**: Optimizes context window usage.
+2. 🧬 **Boosts generalization**: Learns across number patterns.
+3. 🔄 **Uses base conversion** (e.g., decimal → hexadecimal) for compact, arithmetic-aware tokens.
+4. 🧠 **Preserves arithmetic logic**: Even in higher bases, rules still apply.
+
+_We’re experimenting with different bases to improve efficiency further._
+
+---
+
+## 🔁 Multi-token Prediction
+
+Predicting **multiple tokens at once** increases efficiency.
+
+### Example:
+
+```
+Input (reversed):     +12+873+PP      (P = padding tokens)
+Output (reversed):    PPPPPP993+      (P = padding tokens)
+Position IDs:         01234012301234
+```
+
+We're currently supporting **2-token prediction** and working on expanding this method.
+```
+

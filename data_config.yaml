@@ -19,8 +19,7 @@ pre_processing:
   reverse_series : True  # False
   column_delimiter : " " # "|"
   sub_seq_add : False # False
-  base : 2
-  max_length: 64
+  base : 16
 
 series:
   # Length of the binary mask sequence
@@ -43,9 +42,9 @@ sum:
   # Minimum value for number in initial sequence
   min_value: 0
   # Maximum value for number in initial sequence
-  max_value: 1499 #99999
+  max_value: 9999 #99999
   # Percentage of numbers to retrieve
-  retrieve_percent: 1 # 0.5
+  retrieve_percent: 0.2 # 0.5
   # max length x  & y
   max_length: null
 
