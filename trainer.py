@@ -44,7 +44,7 @@ def train(train_config_path: str = "train_config.yaml", data_config_path: str = 
     random.shuffle(sequences)
     
     # Create dataset
-    dataset = SequenceDataset(sequences, tokenizer, max_length=train_config['model']['n_positions'], split_input_length=True)
+    dataset = SequenceDataset(sequences, tokenizer, max_length=train_config['model']['n_positions'], shift_method=train_config['pre_processing']['shift_method'])
 
     # Train test split
     train_sequences, test_sequences = dataset.split_train_test(test_size=0.3, random_state=42)
@@ -59,12 +59,6 @@ if __name__ == "__main__":
     # Train the model
     train()
 
-    # Generate text
-    # Load config files
-    # train_config = load_config("train_config.yaml")
-    # text_generator = TextGenerator(train_config)
-    # generated_text = text_generator.generate_text("1234 1234 ", max_length=100)
-    # print(generated_text)
 
 
 

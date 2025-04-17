@@ -23,20 +23,20 @@ class ModelManager:
 
     def load_fast_tokenizer_from_local(self) -> PreTrainedTokenizerFast:
         """Load tokenizer from saved file"""
-        tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
+        tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'], self.config['paths']['tokenizer_name']))
         tokenizer.pad_token = "<|pad|>"
         return tokenizer
 
     def load_tokenizer_from_local(self) -> Tokenizer:
         """Load tokenizer from saved file"""
-        tokenizer = Tokenizer.from_file(os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
+        tokenizer = Tokenizer.from_file(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'], self.config['paths']['tokenizer_name']))
         tokenizer.pad_token = "<|pad|>"
         return tokenizer
 
 
     def load_model_from_local(self) -> CustomGPT2LMHeadModel:
         """Load the model from a file"""
-        return CustomGPT2LMHeadModel.from_pretrained(self.config['paths']['model_load_path'])
+        return CustomGPT2LMHeadModel.from_pretrained(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name']))
     
     
     def load_checkpoint_from_local(self) -> Tuple[CustomGPT2LMHeadModel, PreTrainedTokenizerFast]:
@@ -50,20 +50,19 @@ class ModelManager:
     
     def save_fast_tokenizer_to_local(self, tokenizer: PreTrainedTokenizerFast):
         """Save the tokenizer to a file"""
-        os.makedirs(os.path.dirname(self.config['paths']['tokenizer_save_path']), exist_ok=True)
-        tokenizer.save_pretrained(self.config['paths']['tokenizer_save_path'])
+        os.makedirs(os.path.dirname(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'])), exist_ok=True)
+        tokenizer.save_pretrained(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name']))
 
 
     def save_tokenizer_to_local(self, tokenizer: Tokenizer):
         """Save the tokenizer to a file"""
-        os.makedirs(os.path.dirname(self.config['paths']['tokenizer_save_path']), exist_ok=True)
-        tokenizer.save(os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
-        
+        os.makedirs(os.path.dirname(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'])), exist_ok=True)
+        tokenizer.save_pretrained(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name']))
 
 
     def save_model_to_local(self, model: CustomGPT2LMHeadModel):
         """Save the model to a file"""
-        model.save_pretrained(self.config['paths']['model_save_path'])
+        model.save_pretrained(os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name']))
 
 
     # Hugging Face Hub loaders
@@ -107,13 +106,13 @@ class ModelManager:
             hf_config = self.login_to_huggingface()
             
             # Create local directory if it doesn't exist
-            local_dir = self.config['paths']['model_load_path']
+            local_dir = os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'])
             os.makedirs(local_dir, exist_ok=True)
 
             # Initialize repository from hub
             repo = Repository(
                 local_dir=local_dir,
-                clone_from=f"{hf_config['username']}/{hf_config['model_name']}", 
+                clone_from=self.config['training']['load_checkpoint'].replace("https://huggingface.co/", ""), #f"{hf_config['username']}/{hf_config['model_name']}", 
                 use_auth_token=hf_config['token'],
                 repo_type="model",
                 git_user=hf_config["username"],
@@ -123,7 +122,7 @@ class ModelManager:
             # Pull latest changes, overriding any conflicts
             repo.git_pull(rebase=True)
 
-            print(f"Successfully downloaded repository from {hf_config['username']}/{hf_config['model_name']} to {local_dir}")
+            print(f"Successfully downloaded repository from {self.config['training']['load_checkpoint']} to {local_dir}")
             
         except Exception as e:
             print(f"Error downloading repository from Hugging Face Hub: {str(e)}")
@@ -163,7 +162,7 @@ class ModelManager:
         hf_config = self.login_to_huggingface()
 
         # Convert tokenizer to Hugging Face format 
-        fast_tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file']))
+        fast_tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'], self.config['paths']['tokenizer_name']))
         
 
         # Push to hub
@@ -177,14 +176,14 @@ class ModelManager:
             hf_config = self.login_to_huggingface()
             
             # Get tokenizer file path
-            tokenizer_file = os.path.join(self.config['paths']['tokenizer_save_path'], self.config['paths']['tokenizer_file'])
+            tokenizer_file = os.path.join(self.config['paths']['model_local_path'], self.config['paths']['model_name'], self.config['paths']['tokenizer_name'])
             
             # Upload single file to hub
             from huggingface_hub import HfApi
             api = HfApi()
             api.upload_file(
                 path_or_fileobj=tokenizer_file,
-                path_in_repo=self.config['paths']['tokenizer_file'],
+                path_in_repo=self.config['paths']['tokenizer_name'],
                 repo_id=f"{hf_config['username']}/{hf_config['model_name']}", 
                 token=hf_config['token'],
                 repo_type="model"

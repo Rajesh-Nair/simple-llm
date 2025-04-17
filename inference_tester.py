@@ -30,7 +30,7 @@ for _ in tqdm(range(total_pairs)):
 
     prompt = f"{num1} {num2}"
     processor = process(train_config)
-    delimiter = data_config["pre_processing"]["replace_column_delimiter"]
+    delimiter = train_config["pre_processing"]["replace_column_delimiter"]
     prompt = delimiter + processor.pre_processing(prompt) + delimiter
     #print("Prompt : ", prompt)
 
