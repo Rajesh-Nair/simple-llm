@@ -69,10 +69,12 @@ class SequenceDataset(Dataset):
     def __getitem__(self, idx):
         x_seq, y_seq, z_seq = self.sequences[idx].split(":")
         input_length = len("".join([x_seq, y_seq]))
+
         if self.shift_method == "standard":
             self.shift_label = 1
         else :
-            self.shift_label = len(min(y_seq, z_seq))
+            self.shift_label = len(y_seq)
+
         sequence = "".join([x_seq, y_seq, z_seq])
 
         # PreTrainedTokenizerFast returns a dictionary with 'input_ids'

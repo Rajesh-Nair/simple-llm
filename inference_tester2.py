@@ -19,13 +19,14 @@ tokenizer = model_manager.load_fast_tokenizer_from_local()
 # model_manager.save_model_to_local(model)
 # model_manager.save_fast_tokenizer_to_local(tokenizer)
 
+print("shift_method: ", config['pre_processing']['shift_method'])
 
 # test input
 print("Test input------------------------")
 
-input = ["+1201+:23+:3501+"]
+input = ["+1201+:2000+:32+"]
 
-dataset = SequenceDataset(input, tokenizer,max_length=16)
+dataset = SequenceDataset(input, tokenizer,max_length=16, shift_method=config['pre_processing']['shift_method'])
 
 for i in range(len(dataset)):
     print("--------------------------------")
