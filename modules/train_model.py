@@ -175,11 +175,8 @@ class GPT2ModelTrainer:
             optimizer.zero_grad()  # Zero gradients at start of epoch
             
             for step, (input_ids, labels, attention_mask) in enumerate(progress_bar):
-                if self.config['pre_processing']['shift_method'] == "standard":
-                    outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
-                else:
-                    outputs = model(input_ids, labels=input_ids, shift_labels=labels, attention_mask=attention_mask)
-
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
+                
                 loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)
@@ -302,10 +299,7 @@ class GPT2ModelTrainer:
         with torch.no_grad():
             progress_bar = tqdm(eval_loader, desc='Evaluating')
             for input_ids, labels, attention_mask in progress_bar:
-                if self.config['pre_processing']['shift_method'] == "standard":
-                    outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
-                else:
-                    outputs = model(input_ids, labels=input_ids, shift_labels=labels, attention_mask=attention_mask)
+                outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
                 loss = outputs.loss
                 total_loss += loss.item()
                 total_samples += input_ids.size(0)

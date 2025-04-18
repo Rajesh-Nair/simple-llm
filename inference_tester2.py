@@ -24,8 +24,9 @@ print("shift_method: ", config['pre_processing']['shift_method'])
 # test input
 print("Test input------------------------")
 
-input = ["+1201+:2000+:32+"]
-
+input = ["+101+:2001+:3011+"]
+input_length = len("".join(input[0].split(":")[:-1]))
+print("input_length: ", input_length)
 dataset = SequenceDataset(input, tokenizer,max_length=16, shift_method=config['pre_processing']['shift_method'])
 
 for i in range(len(dataset)):
@@ -48,13 +49,13 @@ output = model(
                 input_ids,
                 attention_mask=attention_mask, 
                 position_ids=position_ids,
-                shift_labels=label_ids
+                labels=label_ids
                 )
 
 
 print("Output shape : ", output.logits.shape)
 #print("Output : ", torch.softmax(output.logits[:, -1, :], dim=-1))
-probs = torch.softmax(output.logits[:, 5:8, :], dim=-1)
+probs = torch.softmax(output.logits[:, input_length-2:, :], dim=-1)
 top_probs, top_tokens = torch.topk(probs, k=5)
 print(top_probs.shape, top_tokens.shape)
 print("Top 5 tokens and probabilities:")

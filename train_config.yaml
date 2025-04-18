@@ -12,7 +12,7 @@ pre_processing:
   replace_column_delimiter : "+" # None
   split_output : True
   base : 16
-  shift_method : "standard" # "full" or "standard"
+  shift_method : "1" # "full" or "standard" or a int
 
 tokenizer:
   method : "null" # "bpe" or "null"

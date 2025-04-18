@@ -71,9 +71,14 @@ class SequenceDataset(Dataset):
         input_length = len("".join([x_seq, y_seq]))
 
         if self.shift_method == "standard":
-            self.shift_label = 1
-        else :
+            self.shift_label = 0
+        elif self.shift_method == "full":
             self.shift_label = len(y_seq)
+        else:
+            try:
+                self.shift_label = int(self.shift_method)
+            except:
+                raise ValueError(f"Invalid shift method: {self.shift_method}")
 
         sequence = "".join([x_seq, y_seq, z_seq])
 
@@ -84,9 +89,13 @@ class SequenceDataset(Dataset):
         sequence_ids = sequence_encoded['input_ids']
         sequence_attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in sequence_ids]
             
-        # Split into input and target - target is shifted by 1
-        x = torch.tensor(sequence_ids[:-1*self.shift_label])  # Input sequence
-        x_mask = torch.tensor(sequence_attention_mask[:-1*self.shift_label])  # Attention mask for input
+        # Split into input and target - target is shifted by shift_label
+        if self.shift_label == 0:
+            x = torch.tensor(sequence_ids)  # Input sequence
+            x_mask = torch.tensor(sequence_attention_mask)  # Attention mask for input
+        else:
+            x = torch.tensor(sequence_ids[:-1*self.shift_label])  # Input sequence
+            x_mask = torch.tensor(sequence_attention_mask[:-1*self.shift_label])  # Attention mask for input
 
         # Target sequence
         y = torch.tensor(sequence_ids[self.shift_label:])
@@ -95,7 +104,7 @@ class SequenceDataset(Dataset):
         y[y == self.tokenizer.pad_token_id] = -100
 
         # Do not train on the input sequence
-        y[:input_length-self.shift_label] = -100
+        y[:input_length-1-self.shift_label] = -100
             
         return x, y, x_mask
     
