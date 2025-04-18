@@ -59,7 +59,7 @@ training:
   upload_to_huggingface: True # Upload to Hugging Face Hub
 
 wandb:
-  enabled: False # Enable wandb
+  enabled: True # Enable wandb
   project_name: "simple-add1" # Wandb project name
   entity: "mirajnair" # Wandb entity
 
