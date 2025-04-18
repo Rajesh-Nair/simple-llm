@@ -32,7 +32,7 @@ model:
   attn_pdrop: 0.1      # Dropout probability for attention
   layer_norm_epsilon: 0.00001 # Layer norm epsilon
   bos_token_id : None # Beginning of sequence token id
-  eos_token_id : None # End of sequence token id
+  eos_token_id : None # End of sequence token id 
   embedding :
     embedding_type: "block" # "fixed" sinusoidal embedding or "block_fixed" sinusoidal embedding or "block" learnable embedding. None for simply trainable embedding
     fixed_pos_theta: 10000.0 # Only used for fixed embedding
