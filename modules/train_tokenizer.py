@@ -104,7 +104,7 @@ class SequenceDataset(Dataset):
         y[y == self.tokenizer.pad_token_id] = -100
 
         # Do not train on the input sequence
-        y[:input_length-1-self.shift_label] = -100
+        y[:input_length-self.shift_label] = -100
             
         return x, y, x_mask
     
