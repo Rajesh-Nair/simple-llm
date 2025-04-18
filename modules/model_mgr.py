@@ -92,11 +92,11 @@ class ModelManager:
             
             # Load tokenizer from hub
             fast_tokenizer = PreTrainedTokenizerFast.from_pretrained(
-                f"{hf_config['username']}/{hf_config['model_name']}"
+                f"{hf_config['username']}/{self.config['paths']['model_name']}"
             )
             fast_tokenizer.pad_token = "<|pad|>"
 
-            print(f"Successfully loaded fast tokenizer from {hf_config['username']}/{hf_config['model_name']}")
+            print(f"Successfully loaded fast tokenizer from {hf_config['username']}/{self.config['paths']['model_name']}")
             return fast_tokenizer
     
     def download_repo_from_hub(self):
@@ -137,18 +137,18 @@ class ModelManager:
             hf_config = self.login_to_huggingface()
                         
             # Set up git remote URL with authentication
-            remote_url = f"https://{hf_config['name']}:{hf_config['token']}@huggingface.co/{hf_config['username']}/{hf_config['model_name']}"
+            remote_url = f"https://{hf_config['name']}:{hf_config['token']}@huggingface.co/{hf_config['username']}/{self.config['paths']['model_name']}"
             
             # Push model to hub using git commands
             model.push_to_hub(
-                repo_id=f"{hf_config['username']}/{hf_config['model_name']}",
+                repo_id=f"{hf_config['username']}/{self.config['paths']['model_name']}",
                 commit_message=hf_config["commit_message"],
                 use_auth_token=hf_config["token"],
                 git_user=hf_config["username"],
                 git_email=f"{hf_config['username']}@users.noreply.huggingface.co",
                 config={"http.extraheader" : f"AUTHORIZATION: Bearer {hf_config['token']}"}
             )
-            print(f"Successfully uploaded model to {hf_config['remote_path']}")
+            print(f"Successfully uploaded model to {hf_config['username']}/{self.config['paths']['model_name']}")
             
         except Exception as e:
             print(f"Error uploading model to Hugging Face Hub: {str(e)}")
@@ -166,7 +166,7 @@ class ModelManager:
         
 
         # Push to hub
-        fast_tokenizer.push_to_hub(f"{hf_config['username']}/{hf_config['model_name']}")
+        fast_tokenizer.push_to_hub(f"{hf_config['username']}/{self.config['paths']['model_name']}")
 
 
     def upload_tokenizer_to_hub(self):
@@ -184,12 +184,12 @@ class ModelManager:
             api.upload_file(
                 path_or_fileobj=tokenizer_file,
                 path_in_repo=self.config['paths']['tokenizer_name'],
-                repo_id=f"{hf_config['username']}/{hf_config['model_name']}", 
+                repo_id=f"{hf_config['username']}/{self.config['paths']['model_name']}", 
                 token=hf_config['token'],
                 repo_type="model"
             )
             
-            print(f"Successfully uploaded tokenizer.json to {hf_config['remote_path']}")
+            print(f"Successfully uploaded tokenizer.json to {hf_config['username']}/{self.config['paths']['model_name']}")
             
         except Exception as e:
             print(f"Error uploading tokenizer to Hugging Face Hub: {str(e)}")

@@ -147,6 +147,7 @@ class CustomGPT2LMHeadModel(GPT2LMHeadModel):
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
+        **kwargs,
     ) -> torch.Tensor:
 
         # Get block positions

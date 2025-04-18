@@ -12,7 +12,7 @@ pre_processing:
   replace_column_delimiter : "+" # None
   split_output : True
   base : 16
-  shift_method : "full" # "full" or "standard"
+  shift_method : "standard" # "full" or "standard"
 
 tokenizer:
   method : "null" # "bpe" or "null"
@@ -59,7 +59,7 @@ training:
   upload_to_huggingface: True # Upload to Hugging Face Hub
 
 wandb:
-  enabled: True # Enable wandb
+  enabled: False # Enable wandb
   project_name: "simple-add1" # Wandb project name
   entity: "mirajnair" # Wandb entity
 

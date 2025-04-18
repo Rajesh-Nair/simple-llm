@@ -23,9 +23,9 @@ tokenizer = model_manager.load_fast_tokenizer_from_local()
 # test input
 print("Test input------------------------")
 
-input = ["7:+12+23+"]
+input = ["+1201+:23+:3501+"]
 
-dataset = SequenceDataset(input, tokenizer,max_length=16,split_input_length=True)
+dataset = SequenceDataset(input, tokenizer,max_length=16)
 
 for i in range(len(dataset)):
     print("--------------------------------")
@@ -47,7 +47,7 @@ output = model(
                 input_ids,
                 attention_mask=attention_mask, 
                 position_ids=position_ids,
-                labels=label_ids
+                shift_labels=label_ids
                 )
 
 
