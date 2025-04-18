@@ -28,7 +28,7 @@ def generate_sum(min_value, max_value,retrieve_percent=1, max_length=None):
 
     # retrieve a random sample of combinations
     else:
-      sample_rate = int(math.sqrt(retrieve_percent*(max_value-min_value+1)))
+      sample_rate = int((retrieve_percent*(max_value-min_value+1)))
       for i in tqdm(random.sample(range(min_value, max_value+1), sample_rate)):
           for j in tqdm(random.sample(range(min_value, max_value+1), sample_rate)):
               if max_length is None or len(str(i)) + len(str(j)) <= max_length:
