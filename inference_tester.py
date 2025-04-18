@@ -24,18 +24,33 @@ text_generator = TextGenerator(train_config)
 
 total_correct = 0
 total_pairs = 10000
+
+tokens_rate = 1
+if train_config['pre_processing']['shift_method'] == "full":
+    tokens_rate = None
+elif train_config['pre_processing']['shift_method'] == "standard":
+    tokens_rate = 1
+else:
+    try:
+        tokens_rate = int(train_config['pre_processing']['shift_method']) + 1
+    except:
+        raise ValueError(f"Invalid shift method: {train_config['pre_processing']['shift_method']}")
+
 for _ in tqdm(range(total_pairs)):
     num1 = random.randint(0, 9999)
     num2 = random.randint(0, 9999)
 
     prompt = f"{num1} {num2}"
     processor = process(train_config)
-    delimiter = data_config["pre_processing"]["replace_column_delimiter"]
+    delimiter = train_config["pre_processing"]["replace_column_delimiter"]
     prompt = delimiter + processor.pre_processing(prompt) + delimiter
+
+    if train_config['pre_processing']['shift_method'] == "full":
+        tokens_rate = len(processor.pre_processing(f"{num2}") + delimiter)
     #print("Prompt : ", prompt)
 
     # Initialize text generator for inference
-    text = text_generator.generate_tokens(prompt, max_length=16, tokens_rate=2)
+    text = text_generator.generate_tokens(prompt, max_length=16, tokens_rate=tokens_rate)
     #print("Generated text : ", text)
 
 
@@ -45,5 +60,6 @@ for _ in tqdm(range(total_pairs)):
     if int(output) == num1 + num2:
         total_correct += 1
 
+print("tokens_rate: ", tokens_rate)
 print(f"Total correct : {total_correct} out of {total_pairs}")
 print(f"Accuracy : {total_correct/total_pairs*100}%")

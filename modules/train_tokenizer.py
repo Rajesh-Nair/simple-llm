@@ -57,40 +57,56 @@ def train_bpe_tokenizer(file_path: str, tokenizer_config: dict, output_dir: str 
     
 
 class SequenceDataset(Dataset):
-    def __init__(self, sequences: List[str], tokenizer: Tokenizer, max_length: int = 128, split_input_length = False):
+    def __init__(self, sequences: List[str], tokenizer: Tokenizer, max_length: int = 128, shift_method: str = "standard"):
         self.sequences = sequences
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.split_input_length = split_input_length
+        self.shift_method = shift_method
 
     def __len__(self):
         return len(self.sequences)
 
     def __getitem__(self, idx):
-        input_length, sequence = self.sequences[idx].split(":")
-        if self.split_input_length and not input_length:
-            raise ValueError("Input length is not provided")
+        x_seq, y_seq, z_seq = self.sequences[idx].split(":")
+        input_length = len("".join([x_seq, y_seq]))
+
+        if self.shift_method == "standard":
+            self.shift_label = 0
+        elif self.shift_method == "full":
+            self.shift_label = len(y_seq)
+        else:
+            try:
+                self.shift_label = int(self.shift_method)
+            except:
+                raise ValueError(f"Invalid shift method: {self.shift_method}")
+
+        sequence = "".join([x_seq, y_seq, z_seq])
+
         # PreTrainedTokenizerFast returns a dictionary with 'input_ids'
-        encoding = self.tokenizer(sequence, truncation=True, max_length=self.max_length+1, padding='max_length', padding_side='right')
+        sequence_encoded = self.tokenizer(sequence, truncation=True, max_length=self.max_length+self.shift_label, padding='max_length', padding_side='right')
         
         # Get input_ids and create attention mask
-        input_ids = encoding['input_ids']
-        attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in input_ids]
+        sequence_ids = sequence_encoded['input_ids']
+        sequence_attention_mask = [1 if token != self.tokenizer.pad_token_id else 0 for token in sequence_ids]
             
-        # Split into input and target - target is shifted by 1
-        x = torch.tensor(input_ids[:-1])  # Input sequence
-        y = torch.tensor(input_ids[1:])   # Target sequence
-        mask = torch.tensor(attention_mask[:-1])  # Attention mask for input
+        # Split into input and target - target is shifted by shift_label
+        if self.shift_label == 0:
+            x = torch.tensor(sequence_ids)  # Input sequence
+            x_mask = torch.tensor(sequence_attention_mask)  # Attention mask for input
+        else:
+            x = torch.tensor(sequence_ids[:-1*self.shift_label])  # Input sequence
+            x_mask = torch.tensor(sequence_attention_mask[:-1*self.shift_label])  # Attention mask for input
+
+        # Target sequence
+        y = torch.tensor(sequence_ids[self.shift_label:])
 
         # Convert target y to ignore pad positions with -100
         y[y == self.tokenizer.pad_token_id] = -100
 
-        # Assuming no merge of input bits during tokenization
-        if input_length and self.split_input_length:
-            input_length = int(input_length)
-            y[:input_length-1] = -100
+        # Do not train on the input sequence
+        y[:input_length-1-self.shift_label] = -100
             
-        return x, y, mask
+        return x, y, x_mask
     
     
     def split_train_test(self, test_size: float = 0.2, random_state: int = 42) -> Tuple[Dataset, Dataset]:

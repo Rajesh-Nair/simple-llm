@@ -176,6 +176,7 @@ class GPT2ModelTrainer:
             
             for step, (input_ids, labels, attention_mask) in enumerate(progress_bar):
                 outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
+                
                 loss = outputs.loss / train_config['gradient_accumulation_steps']
                 
                 self.accelerator.backward(loss)

@@ -19,13 +19,15 @@ tokenizer = model_manager.load_fast_tokenizer_from_local()
 # model_manager.save_model_to_local(model)
 # model_manager.save_fast_tokenizer_to_local(tokenizer)
 
+print("shift_method: ", config['pre_processing']['shift_method'])
 
 # test input
 print("Test input------------------------")
 
-input = ["7:+12+23+"]
-
-dataset = SequenceDataset(input, tokenizer,max_length=16,split_input_length=True)
+input = ["+101+:2001+:3011+"]
+input_length = len("".join(input[0].split(":")[:-1]))
+print("input_length: ", input_length)
+dataset = SequenceDataset(input, tokenizer,max_length=16, shift_method=config['pre_processing']['shift_method'])
 
 for i in range(len(dataset)):
     print("--------------------------------")
@@ -53,7 +55,7 @@ output = model(
 
 print("Output shape : ", output.logits.shape)
 #print("Output : ", torch.softmax(output.logits[:, -1, :], dim=-1))
-probs = torch.softmax(output.logits[:, 5:8, :], dim=-1)
+probs = torch.softmax(output.logits[:, input_length-2:, :], dim=-1)
 top_probs, top_tokens = torch.topk(probs, k=5)
 print(top_probs.shape, top_tokens.shape)
 print("Top 5 tokens and probabilities:")

@@ -8,13 +8,10 @@ def data_preprocessing(function: callable, *args, **kwargs) :
     def extract_sequences(file_path: str, *args, **kwargs) :
         sequences = []
 
-        data_config = load_config("data_config.yaml")
-        process_object = process(data_config)
-
 
         with open(file_path, 'r') as f:
             for line in f:
-                sequences.append(line.strip().split(":")[1])
+                sequences.append(line.strip())
 
         # Write sequences to temporary file for tokenizer training
         temp_file = 'temp_sequences.txt'
@@ -59,7 +56,7 @@ if __name__ == "__main__":
     else:
         build_tokenizer(
             file_path=data_config["storage"]["transformed_path"], # Path to the input text file
-            output_dir=train_config["paths"]["tokenizer_save_path"], # Path to save the tokenizer
+            output_dir=os.path.join(train_config["paths"]["model_local_path"], train_config["paths"]["model_name"]), # Path to save the tokenizer
             tokenizer_config=train_config["tokenizer"]
         )
 
