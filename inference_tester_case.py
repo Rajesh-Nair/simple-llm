@@ -23,8 +23,12 @@ print("shift_method: ", config['pre_processing']['shift_method'])
 
 # test input
 print("Test input------------------------")
+num1 = 101
+num2 = 1002
+out = num1 + num2
+input = ["+{}+:{}+:{}+".format(str(num1)[::-1], str(num2)[::-1], str(out)[::-1])] # ["+101+:2001+:3011+"]
+print("input: ", input)
 
-input = ["+101+:2001+:3011+"] # ["+101+:2001+:3011+"]
 input_length = len("".join(input[0].split(":")[:-1]))
 print("input_length: ", input_length)
 dataset = SequenceDataset(input, tokenizer,max_length=16, shift_method=config['pre_processing']['shift_method'])
