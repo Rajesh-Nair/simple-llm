@@ -1,3 +1,17 @@
+"""
+Inference Tester for Simple LLM
+
+This script tests the arithmetic capabilities of the trained model by:
+1. Loading the model and tokenizer (either from local storage or Hugging Face Hub)
+2. Generating random number pairs for addition testing
+3. Processing inputs according to the configured preprocessing strategy
+4. Evaluating model accuracy on arithmetic operations
+5. Supporting various token prediction rates based on the shift_method configuration
+
+The tester can handle different preprocessing methods including digit reversal,
+block position IDs (Abacus Embedding), and multi-token prediction strategies.
+"""
+
 from modules.utils import load_config
 from modules.model_mgr import ModelManager
 from modules.model_inference import TextGenerator

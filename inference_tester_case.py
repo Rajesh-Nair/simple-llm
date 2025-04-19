@@ -1,3 +1,30 @@
+
+"""
+Inference Tester Case for Simple LLM
+
+This script provides a test case for the arithmetic capabilities of the trained model.
+It demonstrates:
+1. How to set up a specific addition problem (101 + 1002 = 1103)
+2. How the input is preprocessed with digit reversal (e.g., 101 becomes 101 reversed)
+3. How block position IDs (Abacus Embedding) are applied to align digits
+4. How the model processes the input to generate predictions
+5. How different token prediction rates are handled based on the shift_method configuration
+
+The test case shows the internal representation of the input and expected output,
+including tokenization, position IDs, and attention masking, which is useful for
+debugging and understanding the model's behavior on arithmetic operations.
+
+The script also supports visualization of:
+- Token-by-token processing
+- Input/output representation in the model's internal format
+- How position encodings align digits for arithmetic operations
+- The effect of different shift methods on token prediction
+
+These visualizations help in understanding how the model processes arithmetic
+operations and can be used to debug and improve model performance.
+"""
+
+
 #from transformers import GPT2Config 
 from modules.custom_models import CustomGPT2LMHeadModel, CustomGPT2Config
 from modules.model_mgr import ModelManager

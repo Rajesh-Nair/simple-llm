@@ -191,3 +191,43 @@ These results validate our architectural choices and confirm that transformer-ba
    - Optimize memory usage during autoregressive generation
    - Speed up sequential token generation by reusing previous computations
 
+## 🏗️ Project Structure
+
+The project is organized into the following structure:
+
+### 📁 Root Directory
+- `data_generator.py` - Generates synthetic number sequences based on `data_config.yaml`
+- `tokenizer.py` - Trains and manages the custom tokenizer
+- `trainer.py` - Main training script that uses configurations from `train_config.yaml`
+- `inference_tester.py` - Tests model inference capabilities
+- `inference_tester_case.py` - Contains specific test cases for model evaluation
+- `model_tester.py` - Comprehensive model testing suite
+- `evaluator.py` - Evaluates model performance metrics
+
+### 📁 modules/
+Core implementation components:
+- `custom_models.py` - Contains GPT-2 model implementation with custom modifications
+- `model_mgr.py` - Model management utilities (loading, saving, etc.)
+- `train_model.py` - Training loop and related utilities
+- `train_tokenizer.py` - Tokenizer training implementation
+- `model_inference.py` - Inference logic and utilities
+- `data_processor.py` - Data preprocessing and transformation utilities
+- `sequence_generator.py` - Utilities for sequence generation and manipulation
+- `utils.py` - General utility functions
+
+### 📁 attention_visualizations/
+- Contains visualization tools and outputs for model attention patterns
+
+### 📄 Configuration Files
+- `data_config.yaml` - Dataset generation parameters
+- `train_config.yaml` - Model training hyperparameters
+- `accelerate_config.yaml` - Accelerate library configuration
+- `secret.yaml` - API keys and sensitive configurations
+
+### 📄 Other Files
+- `requirements.txt` - Python dependencies
+- `run_script.sh` - Shell script for running the training pipeline
+- `nb_test_tokenizer.ipynb` - Jupyter notebook for tokenizer testing
+
+This structure separates concerns into distinct modules while maintaining a clear organization of the codebase. The modular design allows for easy extension and modification of individual components.
+
