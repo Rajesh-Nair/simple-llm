@@ -136,7 +136,7 @@ Visualizing attention patterns reveals how the model processes arithmetic operat
 
 ### Layer 1 Attention Patterns
 
-![Layer 1 Attention Visualization](attention_visualizations/layer_1_attention.png)
+![Layer 1 Attention Visualization](https://github.com/Rajesh-Nair/simple-llm/raw/main/attention_visualizations/layer_1_attention.png)
 
 In this visualization:
 - **Bright vertical bars** at positions 1, 5, and 10 show how the model focuses on unit digits from both inputs and the output
