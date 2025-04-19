@@ -19,7 +19,7 @@ This project implements a full machine learning pipeline:
 - Uses **base-16 (hexadecimal)** conversion for tokenization.
 - Can **add up to 4-digit numbers with 100% accuracy**.
 - Is publicly available on Hugging Face:  
-  🔗 [mirajnair/simple-llm-gpt2-v3.0](https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
+  🔗 [mirajnair/simple-llm-gpt2-v1.0](https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
 
 ---
 
@@ -78,8 +78,8 @@ Inspired by the [Abacus Embedding paper](https://arxiv.org/pdf/2405.17399), we u
 
 **Example:**
 
-- Input: `+1342+879+2221+`
-- Block IDs: `01234012301234`
+- Input:     `+1342+879+2221+`
+- Block IDs: `012340123012340`
 
 #### 🔍 Why Block Position IDs?
 
@@ -121,9 +121,9 @@ Predicting **multiple tokens at once** increases efficiency.
 ### Example:
 
 ```
-Input (reversed):     +12+873+PP      (P = padding tokens)
-Output (reversed):    PPPPPP993+      (P = padding tokens)
-Position IDs:         01234012301234
+Input (reversed):     +12+873+993+PPPP      (P = padding tokens)
+Output (reversed):    PPPPPP993+PPPPPP      (P = padding tokens)
+Position IDs:         0120123012300000
 ```
 
 We're currently supporting **2-token prediction** and working on expanding this method.
