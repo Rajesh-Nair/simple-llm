@@ -88,6 +88,7 @@ Inspired by the [Abacus Embedding paper](https://arxiv.org/pdf/2405.17399), we u
 
 ---
 
+
 ### 🔄 Digit Reversal
 
 As part of preprocessing:
@@ -98,6 +99,9 @@ As part of preprocessing:
 
 1. 🧒 **Human-like learning**: Mimics the left-to-right addition humans use.
 2. 🎯 **Causal attention compatibility**: Enables better carryover handling.
+3. 📚 **Research-backed approach**: Digit reversal has been successfully used in several papers including:
+   - [Transformers Can Do Arithmetic with the Right Embeddings](https://arxiv.org/pdf/2405.17399) (which also introduces Abacus embedding)
+   - [Transformers Can Achieve Length Generalization But Not Robustly](https://arxiv.org/pdf/2402.09371)
 
 ---
 
@@ -110,7 +114,7 @@ Tokenization is **critical** for arithmetic modeling. Our approach:
 3. 🔄 **Uses base conversion** (e.g., decimal → hexadecimal) for compact, arithmetic-aware tokens.
 4. 🧠 **Preserves arithmetic logic**: Even in higher bases, rules still apply.
 
-_We’re experimenting with different bases to improve efficiency further._
+_We're experimenting with different bases to improve efficiency further._
 
 ---
 
@@ -159,4 +163,18 @@ We've rigorously tested our model's arithmetic capabilities with impressive resu
 This perfect accuracy demonstrates that our approach successfully teaches the model to perform addition operations with complete reliability, even on previously unseen number combinations. The combination of our specialized tokenization strategy, position encoding, and multi-token prediction enables the model to generalize arithmetic rules effectively.
 
 These results validate our architectural choices and confirm that transformer-based models can master fundamental arithmetic operations when properly designed.
+
+## 🚀 Next Steps
+
+1. **Multi-token Generation**: 
+   - We've proved the model can output more than 1 token at a time
+   - Test if model can generate all tokens in one-go
+
+2. **Scale Up**:
+   - Increase the length/number of digits in operations
+   - Scale up model size for more complex operations
+
+3. **Length Generalization**:
+   - Implement and test length generalization techniques as described in [Transformers Can Achieve Length Generalization But Not Robustly](https://arxiv.org/pdf/2402.09371)
+   - Explore methods to improve model's ability to handle varying sequence lengths
  
