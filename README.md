@@ -19,7 +19,7 @@ This project implements a full machine learning pipeline:
 - Uses **base-16 (hexadecimal)** conversion for tokenization.
 - Can **add up to 4-digit numbers with 100% accuracy**.
 - Is publicly available on Hugging Face:  
-  🔗 [mirajnair/simple-llm-gpt2-v3.0](https://huggingface.co/mirajnair/simple-llm-gpt2-v3.0)
+  🔗 [mirajnair/simple-llm-gpt2-v1.0](https://huggingface.co/mirajnair/simple-llm-gpt2-v1.0)
 
 ---
 
@@ -78,8 +78,8 @@ Inspired by the [Abacus Embedding paper](https://arxiv.org/pdf/2405.17399), we u
 
 **Example:**
 
-- Input: `+1342+879+2221+`
-- Block IDs: `01234012301234`
+- Input:     `+1342+879+2221+`
+- Block IDs: `012340123012340`
 
 #### 🔍 Why Block Position IDs?
 
@@ -121,11 +121,29 @@ Predicting **multiple tokens at once** increases efficiency.
 ### Example:
 
 ```
-Input (reversed):     +12+873+PP      (P = padding tokens)
-Output (reversed):    PPPPPP993+      (P = padding tokens)
-Position IDs:         01234012301234
+Input (reversed):     +12+873+993+PPPP      (P = padding tokens)
+Output (reversed):    PPPPPP993+PPPPPP      (P = padding tokens)
+Position IDs:         0120123012300000
 ```
 
 We're currently supporting **2-token prediction** and working on expanding this method.
 ```
+
+
+## 📊 Attention Visualization
+
+Visualizing attention patterns reveals how the model processes arithmetic operations. Below is an example showing attention patterns for the addition problem: `101 + 1002 = 1103` (represented in reversed form as `+101+:2001+:3011+`).
+
+### Layer 1 Attention Patterns
+
+![Layer 1 Attention Visualization](attention_visualizations/layer_1_attention.png)
+
+In this visualization:
+- **Bright vertical bars** at positions 1, 5, and 10 show how the model focuses on unit digits from both inputs and the output
+- The model learns to align corresponding digit positions (units with units, tens with tens, etc.)
+- Attention patterns reveal how information flows during the addition process, including carry operations
+
+This confirms our block position ID approach helps the model understand the commutative nature of addition and properly align digits for arithmetic operations.
+
+The visualization demonstrates how the model has learned to focus on relevant digits when performing calculations, similar to how humans process arithmetic problems.
 
