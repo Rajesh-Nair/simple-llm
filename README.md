@@ -88,6 +88,7 @@ Inspired by the [Abacus Embedding paper](https://arxiv.org/pdf/2405.17399), we u
 
 ---
 
+
 ### 🔄 Digit Reversal
 
 As part of preprocessing:
@@ -98,6 +99,9 @@ As part of preprocessing:
 
 1. 🧒 **Human-like learning**: Mimics the left-to-right addition humans use.
 2. 🎯 **Causal attention compatibility**: Enables better carryover handling.
+3. 📚 **Research-backed approach**: Digit reversal has been successfully used in several papers including:
+   - [Transformers Can Do Arithmetic with the Right Embeddings](https://arxiv.org/pdf/2405.17399) (which also introduces Abacus embedding)
+   - [Transformers Can Achieve Length Generalization But Not Robustly](https://arxiv.org/pdf/2402.09371)
 
 ---
 
@@ -110,23 +114,26 @@ Tokenization is **critical** for arithmetic modeling. Our approach:
 3. 🔄 **Uses base conversion** (e.g., decimal → hexadecimal) for compact, arithmetic-aware tokens.
 4. 🧠 **Preserves arithmetic logic**: Even in higher bases, rules still apply.
 
-_We’re experimenting with different bases to improve efficiency further._
+_We're experimenting with different bases to improve efficiency further._
 
 ---
 
 ## 🔁 Multi-token Prediction
 
-Predicting **multiple tokens at once** increases efficiency.
+Predicting **multiple tokens at once** increases efficiency. This is possible since we have reversed all the numbers.
 
-### Example:
+### Example: To predict two token at a time, we see output 99 to appear in the first iteration
 
 ```
-Input (reversed):     +12+873+993+PPPP      (P = padding tokens)
-Output (reversed):    PPPPPP993+PPPPPP      (P = padding tokens)
-Position IDs:         0120123012300000
+Input (reversed):     +12+873+PPPPPPPP      (P = padding tokens)
+Output (reversed):    PPPPPP99PPPPPPPP      (P = padding tokens)
+Position IDs:         0120123000000000
 ```
 
-We're currently supporting **2-token prediction** and working on expanding this method.
+We're currently supporting **2-token prediction** and it works well 
+🔗 [mirajnair/simple-llm-gpt2-v2.0](https://huggingface.co/mirajnair/simple-llm-gpt2-v2.0)
+ 
+ ..And we are expanding on generalizing this method - i.e output token at the earliest opportunity so we can have 2 or more predicted in one go.
 
 
 
@@ -159,4 +166,28 @@ We've rigorously tested our model's arithmetic capabilities with impressive resu
 This perfect accuracy demonstrates that our approach successfully teaches the model to perform addition operations with complete reliability, even on previously unseen number combinations. The combination of our specialized tokenization strategy, position encoding, and multi-token prediction enables the model to generalize arithmetic rules effectively.
 
 These results validate our architectural choices and confirm that transformer-based models can master fundamental arithmetic operations when properly designed.
- 
+
+## 🚀 Next Steps
+
+1. **Multi-token Generation**: 
+   - We've proved the model can output more than 1 token at a time 
+   - Test if model can generate all tokens in one-go (greedy generation)
+
+2. **Scale Up**:
+   - Increase the length/number of digits in operations
+   - Scale up model size for more complex operations
+
+3. **Length Generalization**:
+   - Implement and test length generalization techniques as described in [Transformers Can Achieve Length Generalization But Not Robustly](https://arxiv.org/pdf/2402.09371)
+   - Explore methods to improve model's ability to handle varying sequence lengths
+
+4. **Add batch prediction**:
+   - Implement parallel processing of multiple arithmetic operations
+   - Optimize throughput by processing multiple sequences simultaneously
+   - Reduce overall inference time for bulk operations
+
+5. **KV cache**:
+   - Implement key-value caching to reduce redundant computations
+   - Optimize memory usage during autoregressive generation
+   - Speed up sequential token generation by reusing previous computations
+
