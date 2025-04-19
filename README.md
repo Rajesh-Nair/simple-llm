@@ -129,3 +129,21 @@ Position IDs:         0120123012300000
 We're currently supporting **2-token prediction** and working on expanding this method.
 ```
 
+
+## 📊 Attention Visualization
+
+Visualizing attention patterns reveals how the model processes arithmetic operations. Below is an example showing attention patterns for the addition problem: `101 + 1002 = 1103` (represented in reversed form as `+101+:2001+:3011+`).
+
+### Layer 1 Attention Patterns
+
+![Layer 1 Attention Visualization](attention_visualizations/layer_1_attention.png)
+
+In this visualization:
+- **Bright vertical bars** at positions 1, 5, and 10 show how the model focuses on unit digits from both inputs and the output
+- The model learns to align corresponding digit positions (units with units, tens with tens, etc.)
+- Attention patterns reveal how information flows during the addition process, including carry operations
+
+This confirms our block position ID approach helps the model understand the commutative nature of addition and properly align digits for arithmetic operations.
+
+The visualization demonstrates how the model has learned to focus on relevant digits when performing calculations, similar to how humans process arithmetic problems.
+
